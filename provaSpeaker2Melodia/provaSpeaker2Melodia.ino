@@ -1,17 +1,14 @@
 #include <WiFi.h>
 #include <PubSubClient.h> // Libreria MQTT
+#include <credentials.h> // Credenziali WiFi
 
 // Definizione dei pin per lo speaker e il LED
 const int speakerPin = 25;  // Pin GPIO collegato allo speaker
 const int ledPin = 2;       // Pin GPIO collegato al LED
 
-// Credenziali WiFi
-const char* ssid = "iliadbox-69399A";          // Modifica con il nome della tua rete WiFi
-const char* password = "rb6zxqdv2sqdm52vqb62nz";       // Modifica con la password della tua rete WiFi
-
 // Indirizzo del broker MQTT (es. l'IP del tuo PC su cui è attivo Mosquitto)
 // 192.168.1.124
-const char* mqtt_server = "192.168.1.115";     // Modifica con l'IP corretto del broker MQTT
+const char* mqtt_server = "192.168.1.124";     // Modifica con l'IP corretto del broker MQTT
 
 WiFiClient espClient;
 PubSubClient client(espClient);
