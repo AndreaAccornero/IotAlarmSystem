@@ -2,16 +2,22 @@
 #include <PubSubClient.h> // Libreria MQTT
 #include <../credentials.h>/ // Credenziali WiFi
 
-// Definizione dei pin per lo speaker e il LED
+// Definizione dei pin
 const int speakerPin = 25;  // Pin GPIO collegato allo speaker
-const int ledPin = 2;       // Pin GPIO collegato al LED
+const int fsrPin = 35;    // Pin analogico collegato al FSR
+const int ledPin = 2;     // Pin collegato al LED integrato
 
 // Indirizzo del broker MQTT (es. l'IP del tuo PC su cui è attivo Mosquitto)
-// 192.168.1.124
 const char* mqtt_server = "192.168.1.124";     // Modifica con l'IP corretto del broker MQTT
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+// Variabile per memorizzare la lettura del FSR
+int fsrValue = 0;
+
+// Soglia di pressione per accendere il LED
+int threshold = 1;  // Cambia questo valore in base alla sensibilità che desideri
 
 // Definizione delle note musicali (frequenze in Hz)
 #define NOTE_C4  262
@@ -136,4 +142,24 @@ void loop() {
     reconnect();
   }
   client.loop();
+
+  // Legge il valore analogico dal FSR
+  fsrValue = analogRead(fsrPin);
+
+  // Stampa il valore del sensore per il debug
+  Serial.print("FSR Value: ");
+  Serial.println(fsrValue);
+
+  // Se il valore supera la soglia, spegni il LED e invia un messaggio al broker MQTT
+  if (fsrValue > threshold) {
+    digitalWrite(ledPin, LOW);   // Spegni il LED
+    noTone(speakerPin);
+    client.publish("esp32/commands", "pressure_detected");  // Invia il messaggio al broker
+  } else {
+    digitalWrite(ledPin, HIGH);  // Accendi il LED
+    tone(speakerPin, 1000);   // Suona un tono
+  }
+
+  // Ritardo per evitare letture troppo frequenti
+  delay(100);
 }
