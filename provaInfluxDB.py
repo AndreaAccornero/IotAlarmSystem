@@ -38,3 +38,4 @@ time.sleep(2)
 
 # Chiudi la connessione a InfluxDB
 client.close()
+
