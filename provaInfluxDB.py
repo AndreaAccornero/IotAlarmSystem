@@ -1,10 +1,14 @@
 from influxdb_client import InfluxDBClient, Point, WriteOptions
 import time
+from dotenv import load_dotenv 
+import os
+
+load_dotenv(".env")
 
 # Configurazione di InfluxDB
-token = "BFpWJl0md8XrsvA7x8wEOQr0nyudw0gO6_KXWZYbmrhwziXB26c4WKMx1dK64h-cjv-AtMe_3mdbIcfQeYLOlA=="
-org = "Prova"
-bucket = "prova"
+token = os.getenv("token")
+org = "IoTAlarmSystem"
+bucket = "Prova"
 
 client = InfluxDBClient(url="http://localhost:8086", token=token, org=org)
 
@@ -38,4 +42,4 @@ time.sleep(2)
 
 # Chiudi la connessione a InfluxDB
 client.close()
-
+ 

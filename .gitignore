@@ -1,2 +1,3 @@
 credentials.h
 .DS_Store
+.env
