@@ -18,7 +18,6 @@ write_api = client.write_api(write_options=WriteOptions(batch_size=1))
 
 mqtt_broker = "localhost"
 mqtt_port = 1883
-mqtt_topic_command = "iot/bed_alarm/commands"
 mqtt_topic_data = "iot/bed_alarm/update_sampling_rate"
 
 sampling_rate = 15 # Intervallo tra le letture dei sensori (secondi)
@@ -26,7 +25,7 @@ sampling_rate = 15 # Intervallo tra le letture dei sensori (secondi)
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker with result code {rc}")
-    client.subscribe(mqtt_topic_command)
+    client.subscribe(mqtt_topic_data)
 
 
 def on_message(client, userdata, msg):
