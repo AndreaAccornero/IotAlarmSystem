@@ -116,8 +116,13 @@ void connectToMQTT() {
     Serial.println("Connecting to MQTT...");
     if (client.connect("ESP32Client")) {
       Serial.println("Connected to MQTT broker");
-      client.subscribe("iot/bed_alarm/update_sampling_rate");  // Iscriviti al topic per aggiornare il sampling rate
+
+      // Iscriviti ai topic necessari
+      client.subscribe("iot/bed_alarm/update_sampling_rate"); 
       Serial.println("Subscribed to topic: iot/bed_alarm/update_sampling_rate");
+
+      client.subscribe("iot/bed_alarm/stop_alarm"); 
+      Serial.println("Subscribed to topic: iot/bed_alarm/stop_alarm");
     } else {
       Serial.print("Failed MQTT connection, rc=");
       Serial.print(client.state());
@@ -126,6 +131,7 @@ void connectToMQTT() {
     }
   }
 }
+
 
 void loop() {
   // Mantieni la connessione MQTT attiva e riconnettiti se necessario
