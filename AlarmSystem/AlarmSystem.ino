@@ -30,12 +30,13 @@ void mqtt_callback(char* topic, byte* message, unsigned int length) {
   Serial.println(topic);
   String msg;
 
+  // Concatena il messaggio ricevuto
   for (int i = 0; i < length; i++) {
     msg += (char)message[i];
   }
   Serial.println("Message: " + msg);
 
-  // Parsing del messaggio JSON per ottenere il sampling_rate
+  // Parsing del messaggio JSON per "iot/bed_alarm/update_sampling_rate"
   if (String(topic) == "iot/bed_alarm/update_sampling_rate") {
     DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, msg);
@@ -61,7 +62,31 @@ void mqtt_callback(char* topic, byte* message, unsigned int length) {
       Serial.println("JSON does not contain 'sampling_rate' key");
     }
   }
+
+  // Parsing del messaggio JSON per "iot/bed_alarm/stop_alarm"
+  else if (String(topic) == "iot/bed_alarm/stop_alarm") {
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, msg);
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.f_str());
+      return;
+    }
+
+    if (doc.containsKey("stop_alarm")) {
+      bool stop_alarm = doc["stop_alarm"].as<bool>();
+      if (stop_alarm) {
+        Serial.println("Stop alarm command received. Disabling alarm...");
+        // Aggiungi qui la logica per fermare l'allarme
+      } else {
+        Serial.println("Stop alarm command received but value is false.");
+      }
+    } else {
+      Serial.println("JSON does not contain 'stop_alarm' key");
+    }
+  }
 }
+
 
 void setup() {
   pinMode(speakerPin, OUTPUT);
@@ -150,6 +175,7 @@ void loop() {
 
   Serial.print("Current sampling rate is: ");
   Serial.println(sampling_rate);
+  Serial.println(stop_alarm)
   // Ritardo per evitare letture troppo frequenti
   delay(sampling_rate);
 }
