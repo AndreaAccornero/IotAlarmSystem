@@ -7,8 +7,8 @@ mqqt_topic = "iot/bed_alarm"
 mqtt_topic_sampling_rate = "iot/bed_alarm/update_sampling_rate"
 mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"
 
-sampling_rate = 20 
-stop_alarm = False
+sampling_rate = 3500
+stop_alarm = True
 
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc):
