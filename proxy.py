@@ -3,7 +3,6 @@ from influxdb_client import InfluxDBClient, Point, WriteOptions
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv 
 import os
-import time 
 import json
 
 load_dotenv(".env")
@@ -18,14 +17,17 @@ write_api = client.write_api(write_options=WriteOptions(batch_size=1))
 
 mqtt_broker = "localhost"
 mqtt_port = 1883
-mqtt_topic_data = "iot/bed_alarm/update_sampling_rate"
+mqqt_topic = "iot/bed_alarm"
+mqtt_topic_sampling_rate = "iot/bed_alarm/update_sampling_rate"
+mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"
 
-sampling_rate = 15 # Intervallo tra le letture dei sensori (secondi)
+sampling_rate = 15 
+stop_allarm = True 
 
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc):
     print(f"Connected to MQTT broker with result code {rc}")
-    client.subscribe(mqtt_topic_data)
+    client.subscribe(mqqt_topic)
 
 
 def on_message(client, userdata, msg):
@@ -50,7 +52,8 @@ mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
 mqtt_client.loop_start()
 
-mqtt_client.publish(mqtt_topic_data, json.dumps({"sampling_rate": sampling_rate}))
+mqtt_client.publish(mqtt_topic_sampling_rate, json.dumps({"sampling_rate": sampling_rate}))
+mqtt_client.publish(mqtt_topic_stop_alarm, json.dumps({"stop_alarm": stop_allarm}))
 mqtt_client.loop_stop()
 
 def generate_data(pressure_value):
@@ -90,5 +93,5 @@ def sensor_data():
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
     # Pubblica il nuovo sampling rate per Arduino
-    # mqtt_client.publish(mqtt_topic_data, json.dumps({"sampling_rate": sampling_rate}))
+    # mqtt_client.publish(mqtt_topic_sampling_rate, json.dumps({"sampling_rate": sampling_rate}))
 
