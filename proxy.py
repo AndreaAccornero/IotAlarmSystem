@@ -45,9 +45,9 @@ def on_message(client, userdata, msg):
 
 # Inizializza il client MQTT
 mqtt_client = mqtt.Client("PythonClient")
+mqtt_client.connect(mqtt_broker, mqtt_port, 60)
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
-mqtt_client.connect(mqtt_broker, mqtt_port, 60)
 mqtt_client.loop_start()
 
 mqtt_client.publish(mqtt_topic_data, json.dumps({"sampling_rate": sampling_rate}))
