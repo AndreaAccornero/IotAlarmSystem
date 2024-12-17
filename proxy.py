@@ -69,17 +69,22 @@ def update_config():
     if 'sampling_rate' in data:
         sampling_rate = int(data['sampling_rate'])
         mqtt_client.publish(mqtt_topic_sampling_rate, json.dumps({"sampling_rate": sampling_rate}))
+        mqtt_client.loop(2)  # Forza il loop per inviare il messaggio
+        print(f"Published sampling_rate: {sampling_rate} to {mqtt_topic_sampling_rate}")
+        
     if 'stop_alarm' in data:
         stop_alarm = data['stop_alarm'] == "true"
         mqtt_client.publish(mqtt_topic_stop_alarm, json.dumps({"stop_alarm": stop_alarm}))
-
-
+        mqtt_client.loop(2)  # Forza il loop per inviare il messaggio
+        print(f"Published stop_alarm: {stop_alarm} to {mqtt_topic_stop_alarm}")
+    
     print("------ Current Configuration ------")
     print(f"Sampling Rate: {sampling_rate} seconds")
     print(f"Stop Alarm: {stop_alarm}")
     print("------------------------------------")
     
     return jsonify({"sampling_rate": sampling_rate, "stop_alarm": stop_alarm, "status": "success"})
+
 
 # Endpoint per ricevere i dati dal sensore
 @app.route('/sensor_data', methods=['POST'])
