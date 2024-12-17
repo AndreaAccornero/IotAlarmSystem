@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Alarm Configurator</title>
+</head>
+<body>
+    <h1>IoT Bed Alarm Configuration</h1>
+
+    <form id="configForm">
+        <label for="sampling_rate">Sampling Rate (seconds):</label>
+        <input type="number" id="sampling_rate" name="sampling_rate" placeholder="Enter sampling rate" required>
+        <br><br>
+
+        <label for="stop_alarm">Stop Alarm:</label>
+        <select id="stop_alarm" name="stop_alarm">
+            <option value="false">False</option>
+            <option value="true">True</option>
+        </select>
+        <br><br>
+
+        <button type="button" onclick="sendConfig()">Submit</button>
+    </form>
+
+    <p id="response"></p>
+
+    <script>
+        function sendConfig() {
+            const sampling_rate = document.getElementById('sampling_rate').value;
+            const stop_alarm = document.getElementById('stop_alarm').value;
+
+            fetch('/update_config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sampling_rate: sampling_rate,
+                    stop_alarm: stop_alarm
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('response').innerText = 
+                    `Response: Sampling Rate = ${data.sampling_rate}, Stop Alarm = ${data.stop_alarm}`;
+                console.log("Success:", data);
+            })
+            .catch(error => {
+                document.getElementById('response').innerText = "Error updating configuration.";
+                console.error("Error:", error);
+            });
+        }
+    </script>
+</body>
+</html>
