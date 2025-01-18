@@ -10,7 +10,7 @@ load_dotenv(".env")
 
 # Configurazione di InfluxDB
 token = os.getenv("token")
-org = "IoTAlarmSystem"
+org = "IotAlarmSystem"
 bucket = "Prova"
 
 client = InfluxDBClient(url="http://localhost:8086", token=token, org=org)
@@ -34,7 +34,7 @@ def generate_data(pressure_value):
 
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc):
-    print(f"Connected to MQTT broker with result code {rc}")
+    #print(f"Connected to MQTT broker with result code {rc}")
     client.subscribe("iot/bed_alarm")
 
 def on_message(client, userdata, msg):
