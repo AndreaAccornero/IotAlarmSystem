@@ -5,13 +5,13 @@ import time
 import json
 
 # Configurazioni
-mqtt_broker = "192.168.1.96"
+mqtt_broker = "localhost"
 mqtt_port = 1883
 mqtt_topic_sampling_rate = "iot/bed_alarm/update_sampling_rate"
-server_url = "http://192.168.1.96:5000/sensor_data"
+server_url = "http://localhost:5000/sensor_data"
 
 # Variabili globali
-sampling_rate = 10  # Default: 2 secondi
+sampling_rate = 10  
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:

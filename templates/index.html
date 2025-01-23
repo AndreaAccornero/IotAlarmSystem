@@ -8,44 +8,103 @@
 <body>
     <h1>IoT Bed Alarm Configuration</h1>
 
-    <form id="configForm">
+    <!-- Form per aggiornare il sampling rate -->
+    <form id="samplingRateForm">
+        <h3>Update Sampling Rate</h3>
         <label for="sampling_rate">Sampling Rate (seconds):</label>
         <input type="number" id="sampling_rate" name="sampling_rate" placeholder="Enter sampling rate" required>
         <br><br>
+        <button type="button" onclick="updateSamplingRate()">Update Sampling Rate</button>
+    </form>
+    <p id="samplingRateResponse"></p>
 
+    <!-- Form per aggiornare lo stato di stop_alarm -->
+    <form id="stopAlarmForm">
+        <h3>Update Stop Alarm</h3>
         <label for="stop_alarm">Stop Alarm:</label>
         <select id="stop_alarm" name="stop_alarm">
             <option value="false">False</option>
             <option value="true">True</option>
         </select>
         <br><br>
-
-        <button type="button" onclick="sendConfig()">Submit</button>
+        <button type="button" onclick="updateStopAlarm()">Update Stop Alarm</button>
     </form>
+    <p id="stopAlarmResponse"></p>
 
-    <p id="response"></p>
+    <!-- Form per selezionare il suono dell'allarme -->
+    <form id="alarmSoundForm">
+        <h3>Select Alarm Sound</h3>
+        <label for="alarm_sound">Choose Alarm Sound:</label>
+        <select id="alarm_sound" name="alarm_sound">
+            <option value="1">Sound 1</option>
+            <option value="2">Sound 2</option>
+            <option value="3">Sound 3</option>
+        </select>
+        <br><br>
+        <button type="button" onclick="updateAlarmSound()">Set Alarm Sound</button>
+    </form>
+    <p id="alarmSoundResponse"></p>
 
     <script>
-        function sendConfig() {
+        // Funzione per aggiornare il sampling rate
+        function updateSamplingRate() {
             const sampling_rate = document.getElementById('sampling_rate').value;
-            const stop_alarm = document.getElementById('stop_alarm').value;
 
-            fetch('/update_config', {
+            fetch('/update_sampling_rate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sampling_rate: sampling_rate,
-                    stop_alarm: stop_alarm
-                })
+                body: JSON.stringify({ sampling_rate: sampling_rate })
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('response').innerText = 
-                    `Response: Sampling Rate = ${data.sampling_rate}, Stop Alarm = ${data.stop_alarm}`;
+                document.getElementById('samplingRateResponse').innerText = 
+                    `Sampling Rate Updated: ${data.sampling_rate} seconds`;
                 console.log("Success:", data);
             })
             .catch(error => {
-                document.getElementById('response').innerText = "Error updating configuration.";
+                document.getElementById('samplingRateResponse').innerText = "Error updating sampling rate.";
+                console.error("Error:", error);
+            });
+        }
+
+        // Funzione per aggiornare lo stato di stop_alarm
+        function updateStopAlarm() {
+            const stop_alarm = document.getElementById('stop_alarm').value;
+
+            fetch('/update_stop_alarm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stop_alarm: stop_alarm })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('stopAlarmResponse').innerText = 
+                    `Stop Alarm Updated: ${data.stop_alarm}`;
+                console.log("Success:", data);
+            })
+            .catch(error => {
+                document.getElementById('stopAlarmResponse').innerText = "Error updating stop alarm.";
+                console.error("Error:", error);
+            });
+        }
+
+        // Funzione per aggiornare il suono dell'allarme
+        function updateAlarmSound() {
+            const alarm_sound = parseInt(document.getElementById('alarm_sound').value);
+
+            fetch('/update_alarm_sound', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ alarm_sound: alarm_sound })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('alarmSoundResponse').innerText = 
+                    `Alarm Sound Set to: ${data.alarm_sound}`;
+                console.log("Success:", data);
+            })
+            .catch(error => {
+                document.getElementById('alarmSoundResponse').innerText = "Error setting alarm sound.";
                 console.error("Error:", error);
             });
         }
