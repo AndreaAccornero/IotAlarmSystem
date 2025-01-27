@@ -7,7 +7,7 @@ import json
 # Configurazioni
 mqtt_broker = "localhost"
 mqtt_port = 1883
-mqtt_topic_sampling_rate = "iot/bed_alarm/update_sampling_rate"
+mqtt_topic_sampling_rate = "iot/bed_alarm/sampling_rate"
 server_url = "http://localhost:5000/sensor_data"
 
 # Variabili globali
