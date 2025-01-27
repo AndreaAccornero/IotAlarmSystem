@@ -1,42 +1,111 @@
-#define PRESSURE_SENSOR_PIN 33 // Definisce il pin collegato al sensore di pressione
-#define LED_BUILTIN 2          // Pin del LED integrato (di solito il pin 2 per ESP32)
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include "../credentials.h"
+
+#define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
+#define LED_BUILTIN 2          // Pin del LED integrato
 #define SPEAKER_PIN 32         // Pin collegato allo speaker
-#define PRESSURE_THRESHOLD 4095 // Soglia per attivare il lampeggio e il suono
+#define PRESSURE_THRESHOLD 4095 // Soglia per attivare LED e speaker
+
+// Configurazione HTTP
+const char* serverName = "http://192.168.1.108:5000/sensor_data"; // URL del server Flask
+
+// Variabili globali
+unsigned long last_sample_time = 0;  // Memorizza il timestamp dell'ultima lettura
+unsigned long sampling_rate = 5000; // Intervallo tra le letture (in millisecondi)
+bool alert_active = false;          // Stato attuale dell'allarme (LED e speaker)
 
 void setup() {
   // Inizializzazione del monitor seriale per il debug
   Serial.begin(115200);
-  // Configura il pin del sensore come ingresso
+
+  // Configura i pin
   pinMode(PRESSURE_SENSOR_PIN, INPUT);
-  // Configura il LED integrato come uscita
   pinMode(LED_BUILTIN, OUTPUT);
-  // Configura lo speaker come uscita
   pinMode(SPEAKER_PIN, OUTPUT);
+
+  // Connessione WiFi
+  connectToWiFi();
 }
 
 void loop() {
-  // Legge il valore dal sensore di pressione
-  int sensorValue = analogRead(PRESSURE_SENSOR_PIN);
+  unsigned long current_time = millis(); // Ottiene il tempo corrente
 
-  // Stampa il valore letto sul monitor seriale
-  Serial.print("Valore del sensore: ");
-  Serial.println(sensorValue);
+  // Controlla se è trascorso il tempo impostato dal sampling_rate
+  if (current_time - last_sample_time >= sampling_rate) {
+    last_sample_time = current_time;
 
-  // Controlla se il valore supera o è uguale alla soglia
-  if (sensorValue >= PRESSURE_THRESHOLD) {
-    // Lampeggia il LED integrato
-    digitalWrite(LED_BUILTIN, HIGH); // Accende il LED
-    tone(SPEAKER_PIN, 2000);         // Suona lo speaker a 1000 Hz
-    delay(250);                      // Aspetta 250 ms
-    digitalWrite(LED_BUILTIN, LOW);  // Spegne il LED
-    noTone(SPEAKER_PIN);             // Ferma il suono dello speaker
-    delay(250);                      // Aspetta 250 ms
+    // Legge il valore dal sensore di pressione
+    int sensorValue = analogRead(PRESSURE_SENSOR_PIN);
+
+    // Stampa il valore letto sul monitor seriale
+    Serial.print("Valore del sensore: ");
+    Serial.println(sensorValue);
+
+    // Gestisce il LED e lo speaker in base al valore del sensore
+    handleAlert(sensorValue);
+
+    // Invia i dati al server Flask
+    sendPressureData(sensorValue);
+  }
+}
+
+void connectToWiFi() {
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected to WiFi");
+}
+
+void sendPressureData(int pressureValue) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+
+    // Configura la richiesta HTTP
+    http.begin(serverName);
+    http.addHeader("Content-Type", "application/json");
+
+    // Crea il payload JSON
+    String payload = "{\"pressure_value\": " + String(pressureValue) + "}";
+
+    // Invia la richiesta POST
+    int httpResponseCode = http.POST(payload);
+
+    // Controlla la risposta del server
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.print("Data sent successfully. Response code: ");
+      Serial.println(httpResponseCode);
+    } else {
+      Serial.print("Error sending data. HTTP response code: ");
+      Serial.println(httpResponseCode);
+    }
+
+    // Chiude la connessione HTTP
+    http.end();
   } else {
-    // Assicura che il LED sia spento e lo speaker sia muto se il valore è sotto la soglia
-    digitalWrite(LED_BUILTIN, LOW);
-    noTone(SPEAKER_PIN);
+    Serial.println("WiFi Disconnected");
+  }
+}
+
+void handleAlert(int pressureValue) {
+  if (pressureValue >= PRESSURE_THRESHOLD) {
+    // Attiva lo stato di allarme
+    alert_active = true;
+  } else {
+    // Disattiva lo stato di allarme se il valore è sotto la soglia
+    alert_active = false;
   }
 
-  // Piccola pausa prima della prossima lettura
-  delay(500);
+  // Controlla lo stato dell'allarme per gestire LED e speaker
+  if (alert_active) {
+    digitalWrite(LED_BUILTIN, HIGH); // Accende il LED
+    tone(SPEAKER_PIN, 2000);         // Suona lo speaker a 2000 Hz
+  } else {
+    digitalWrite(LED_BUILTIN, LOW);  // Spegne il LED
+    noTone(SPEAKER_PIN);             // Ferma lo speaker
+  }
 }
