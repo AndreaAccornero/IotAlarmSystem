@@ -1,5 +1,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 #include "../credentials.h"
 
 #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
@@ -8,7 +10,15 @@
 #define PRESSURE_THRESHOLD 4095 // Soglia per attivare LED e speaker
 
 // Configurazione HTTP
-const char* serverName = "http://192.168.1.108:5000/sensor_data"; // URL del server Flask
+const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
+
+// Configurazione MQTT
+const char* mqtt_server = "192.168.1.124"; // Indirizzo IP del broker MQTT
+const int mqtt_port = 1883;               // Porta del broker MQTT
+const char* mqtt_topic = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
+
+WiFiClient espClient;          // Client WiFi
+PubSubClient client(espClient); // Oggetto MQTT
 
 // Variabili globali
 unsigned long last_sample_time = 0;  // Memorizza il timestamp dell'ultima lettura
@@ -26,9 +36,23 @@ void setup() {
 
   // Connessione WiFi
   connectToWiFi();
+
+  // Configurazione MQTT
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqttCallback); // Imposta la funzione di callback per i messaggi MQTT
+
+  connectToMQTT();
+
 }
 
 void loop() {
+
+   // Mantiene la connessione MQTT attiva
+  if (!client.connected()) {
+    connectToMQTT();
+  }
+  client.loop();
+
   unsigned long current_time = millis(); // Ottiene il tempo corrente
 
   // Controlla se è trascorso il tempo impostato dal sampling_rate
@@ -47,6 +71,7 @@ void loop() {
 
     // Invia i dati al server Flask
     sendPressureData(sensorValue);
+    
   }
 }
 
@@ -58,6 +83,56 @@ void connectToWiFi() {
     Serial.print(".");
   }
   Serial.println("\nConnected to WiFi");
+}
+
+void connectToMQTT() {
+  while (!client.connected()) {
+    Serial.print("Connecting to MQTT...");
+    if (client.connect("ESP32Client")) { // Nome univoco per il dispositivo MQTT
+      Serial.println("connected");
+
+      // Sottoscrive al topic per ricevere aggiornamenti sul sampling_rate
+      client.subscribe(mqtt_topic);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" trying again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message received on topic: ");
+  Serial.println(topic);
+
+  // Converte il payload in una stringa
+  char json[length + 1];
+  strncpy(json, (char*)payload, length);
+  json[length] = '\0'; // Termina la stringa
+
+  Serial.print("Message: ");
+  Serial.println(json);
+
+  // Parsing del JSON
+  StaticJsonDocument<200> doc; // Crea un buffer JSON con una dimensione adeguata
+  DeserializationError error = deserializeJson(doc, json);
+
+  if (error) {
+    Serial.print("Error parsing JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Estrae il valore di "sampling_rate"
+  if (doc.containsKey("sampling_rate")) {
+    int new_sampling_rate = doc["sampling_rate"];
+    sampling_rate = new_sampling_rate * 1000; // Moltiplica per 1000
+    Serial.print("Updated sampling_rate: ");
+    Serial.println(sampling_rate);
+  } else {
+    Serial.println("Key 'sampling_rate' not found in JSON");
+  }
 }
 
 void sendPressureData(int pressureValue) {
