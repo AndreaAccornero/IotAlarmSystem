@@ -4,108 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IoT Alarm Configurator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        p {
+            font-size: 14px;
+            color: #333;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <h1>IoT Bed Alarm Configuration</h1>
+    <div class="container">
+        <!-- Update Sampling Rate -->
+        <form id="samplingRateForm">
+            <h3>Update Sampling Rate</h3>
+            <label for="sampling_rate">Sampling Rate (seconds):</label>
+            <input type="number" id="sampling_rate" name="sampling_rate" placeholder="Enter sampling rate" required>
+            <button type="button" onclick="updateSamplingRate()">Update Sampling Rate</button>
+            <p id="samplingRateResponse"></p>
+        </form>
 
-    <!-- Form per aggiornare il sampling rate -->
-    <form id="samplingRateForm">
-        <h3>Update Sampling Rate</h3>
-        <label for="sampling_rate">Sampling Rate (seconds):</label>
-        <input type="number" id="sampling_rate" name="sampling_rate" placeholder="Enter sampling rate" required>
-        <br><br>
-        <button type="button" onclick="updateSamplingRate()">Update Sampling Rate</button>
-    </form>
-    <p id="samplingRateResponse"></p>
+        <!-- Update Stop Alarm -->
+        <form id="stopAlarmForm">
+            <h3>Update Stop Alarm</h3>
+            <label for="stop_alarm">Stop Alarm:</label>
+            <select id="stop_alarm" name="stop_alarm">
+                <option value="false">False</option>
+                <option value="true">True</option>
+            </select>
+            <button type="button" onclick="updateStopAlarm()">Update Stop Alarm</button>
+            <p id="stopAlarmResponse"></p>
+        </form>
 
-    <!-- Form per aggiornare lo stato di stop_alarm -->
-    <form id="stopAlarmForm">
-        <h3>Update Stop Alarm</h3>
-        <label for="stop_alarm">Stop Alarm:</label>
-        <select id="stop_alarm" name="stop_alarm">
-            <option value="false">False</option>
-            <option value="true">True</option>
-        </select>
-        <br><br>
-        <button type="button" onclick="updateStopAlarm()">Update Stop Alarm</button>
-    </form>
-    <p id="stopAlarmResponse"></p>
+        <!-- Select Alarm Sound -->
+        <form id="alarmSoundForm">
+            <h3>Select Alarm Sound</h3>
+            <label for="alarm_sound">Alarm Sound:</label>
+            <select id="alarm_sound" name="alarm_sound">
+                <option value="sound1">Sound 1</option>
+                <option value="sound2">Sound 2</option>
+                <option value="sound3">Sound 3</option>
+            </select>
+            <button type="button" onclick="updateAlarmSound()">Update Alarm Sound</button>
+            <p id="alarmSoundResponse"></p>
+        </form>
 
-    <!-- Form per selezionare il suono dell'allarme -->
-    <form id="alarmSoundForm">
-        <h3>Select Alarm Sound</h3>
-        <label for="alarm_sound">Choose Alarm Sound:</label>
-        <select id="alarm_sound" name="alarm_sound">
-            <option value="1">Sound 1</option>
-            <option value="2">Sound 2</option>
-            <option value="3">Sound 3</option>
-        </select>
-        <br><br>
-        <button type="button" onclick="updateAlarmSound()">Set Alarm Sound</button>
-    </form>
-    <p id="alarmSoundResponse"></p>
+        <!-- Set New Alarm -->
+        <form id="newAlarmForm">
+            <h3>Set New Alarm</h3>
+            <label for="alarm_date">Alarm Date:</label>
+            <input type="date" id="alarm_date" name="alarm_date" required>
+
+            <label for="alarm_time">Alarm Time:</label>
+            <input type="time" id="alarm_time" name="alarm_time" required>
+
+            <label for="alarm_frequency">Alarm Frequency:</label>
+            <select id="alarm_frequency" name="alarm_frequency">
+                <option value="everyday">Everyday</option>
+                <option value="weekdays">Weekdays (Mon-Fri)</option>
+                <option value="weekends">Weekends (Sat-Sun)</option>
+                <option value="monday">Every Monday</option>
+                <option value="tuesday">Every Tuesday</option>
+                <option value="wednesday">Every Wednesday</option>
+                <option value="thursday">Every Thursday</option>
+                <option value="friday">Every Friday</option>
+                <option value="saturday">Every Saturday</option>
+                <option value="sunday">Every Sunday</option>
+            </select>
+            <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
+            <p id="newAlarmResponse"></p>
+        </form>
+
+        <!-- Set Alarm Location -->
+        <form id="locationForm">
+            <h3>Set Alarm Location</h3>
+            <label for="location">Choose your location:</label>
+            <select id="location" name="location">
+                <option value="New York">Bologna, Italy</option>
+                <option value="New York">Rome, Italy</option>
+                <option value="New York">Los Angeles, USA</option>
+                <option value="New York">New York, USA</option>
+                <option value="London">London, UK</option>
+                <option value="Paris">Paris, France</option>
+                <option value="Tokyo">Tokyo, Japan</option>
+                <option value="Sydney">Sydney, Australia</option>
+                <option value="custom">Other (Enter manually)</option>
+            </select>
+            <input type="text" id="custom_location" name="custom_location" placeholder="Enter location" style="display: none;">
+            <button type="button" onclick="setAlarmLocation()">Set Location</button>
+            <p id="locationResponse"></p>
+        </form>
+    </div>
 
     <script>
-        // Funzione per aggiornare il sampling rate
-        function updateSamplingRate() {
-            const sampling_rate = document.getElementById('sampling_rate').value;
+        document.getElementById("location").addEventListener("change", function() {
+            if (this.value === "custom") {
+                document.getElementById("custom_location").style.display = "block";
+            } else {
+                document.getElementById("custom_location").style.display = "none";
+            }
+        });
 
-            fetch('/update_sampling_rate', {
+        function setAlarmLocation() {
+            let location = document.getElementById("location").value;
+            if (location === "custom") {
+                location = document.getElementById("custom_location").value;
+            }
+
+            fetch('/set_alarm_location', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sampling_rate: sampling_rate })
+                body: JSON.stringify({ location })
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('samplingRateResponse').innerText = 
-                    `Sampling Rate Updated: ${data.sampling_rate} seconds`;
-                console.log("Success:", data);
+                document.getElementById("locationResponse").innerText = `Location Set: ${data.location}`;
             })
             .catch(error => {
-                document.getElementById('samplingRateResponse').innerText = "Error updating sampling rate.";
-                console.error("Error:", error);
-            });
-        }
-
-        // Funzione per aggiornare lo stato di stop_alarm
-        function updateStopAlarm() {
-            const stop_alarm = document.getElementById('stop_alarm').value;
-
-            fetch('/update_stop_alarm', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ stop_alarm: stop_alarm })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('stopAlarmResponse').innerText = 
-                    `Stop Alarm Updated: ${data.stop_alarm}`;
-                console.log("Success:", data);
-            })
-            .catch(error => {
-                document.getElementById('stopAlarmResponse').innerText = "Error updating stop alarm.";
-                console.error("Error:", error);
-            });
-        }
-
-        // Funzione per aggiornare il suono dell'allarme
-        function updateAlarmSound() {
-            const alarm_sound = parseInt(document.getElementById('alarm_sound').value);
-
-            fetch('/update_alarm_sound', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ alarm_sound: alarm_sound })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('alarmSoundResponse').innerText = 
-                    `Alarm Sound Set to: ${data.alarm_sound}`;
-                console.log("Success:", data);
-            })
-            .catch(error => {
-                document.getElementById('alarmSoundResponse').innerText = "Error setting alarm sound.";
-                console.error("Error:", error);
+                document.getElementById("locationResponse").innerText = "Error setting location.";
+                console.error(error);
             });
         }
     </script>
