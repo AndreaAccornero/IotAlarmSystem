@@ -130,57 +130,55 @@
             <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
             <p id="newAlarmResponse"></p>
         </form>
-
-        <!-- Set Alarm Location -->
-        <form id="locationForm">
-            <h3>Set Alarm Location</h3>
-            <label for="location">Choose your location:</label>
-            <select id="location" name="location">
-                <option value="New York">Bologna, Italy</option>
-                <option value="New York">Rome, Italy</option>
-                <option value="New York">Los Angeles, USA</option>
-                <option value="New York">New York, USA</option>
-                <option value="London">London, UK</option>
-                <option value="Paris">Paris, France</option>
-                <option value="Tokyo">Tokyo, Japan</option>
-                <option value="Sydney">Sydney, Australia</option>
-                <option value="custom">Other (Enter manually)</option>
-            </select>
-            <input type="text" id="custom_location" name="custom_location" placeholder="Enter location" style="display: none;">
-            <button type="button" onclick="setAlarmLocation()">Set Location</button>
-            <p id="locationResponse"></p>
-        </form>
     </div>
 
     <script>
-        document.getElementById("location").addEventListener("change", function() {
-            if (this.value === "custom") {
-                document.getElementById("custom_location").style.display = "block";
-            } else {
-                document.getElementById("custom_location").style.display = "none";
-            }
-        });
-
-        function setAlarmLocation() {
-            let location = document.getElementById("location").value;
-            if (location === "custom") {
-                location = document.getElementById("custom_location").value;
-            }
-
-            fetch('/set_alarm_location', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ location })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("locationResponse").innerText = `Location Set: ${data.location}`;
-            })
-            .catch(error => {
-                document.getElementById("locationResponse").innerText = "Error setting location.";
+        async function sendPostRequest(endpoint, data, responseElement) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
+            } catch (error) {
+                document.getElementById(responseElement).innerText = "Error sending request.";
                 console.error(error);
-            });
+            }
         }
+
+        function updateSamplingRate() {
+            let samplingRate = document.getElementById("sampling_rate").value;
+            sendPostRequest('/update_sampling_rate', { sampling_rate: samplingRate }, "samplingRateResponse");
+        }
+
+        function updateStopAlarm() {
+            let stopAlarm = document.getElementById("stop_alarm").value;
+            sendPostRequest('/update_stop_alarm', { stop_alarm: stopAlarm }, "stopAlarmResponse");
+        }
+
+        function updateAlarmSound() {
+            let alarmSound = document.getElementById("alarm_sound").value;
+            sendPostRequest('/update_alarm_sound', { alarm_sound: alarmSound }, "alarmSoundResponse");
+        }
+
+        function setNewAlarm() {
+            let alarmDate = document.getElementById("alarm_date").value;
+            let alarmTime = document.getElementById("alarm_time").value;
+            let alarmFrequency = document.getElementById("alarm_frequency").value;
+            sendPostRequest('/set_new_alarm', { 
+                alarm_date: alarmDate, 
+                alarm_time: alarmTime, 
+                alarm_frequency: alarmFrequency 
+            }, "newAlarmResponse");
+        }
+
+        // Forza la cache a essere cancellata e assicura che le modifiche siano visibili
+        window.onload = function() {
+            console.log("Forcing cache refresh.");
+            fetch('/force_refresh').then(() => console.log("Cache refreshed."));
+        };
     </script>
 </body>
 </html>
