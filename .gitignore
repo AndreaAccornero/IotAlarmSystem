@@ -1,7 +1,7 @@
 credentials.h
 .DS_Store
 .env
-.csv
+*.csv
 tmp.ipynb
 dati.ipynb
 datisintetici.ipynb

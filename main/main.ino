@@ -7,7 +7,7 @@
   #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
   #define LED_BUILTIN 2          // Pin del LED integrato
   #define SPEAKER_PIN 32         // Pin collegato allo speaker
-  #define PRESSURE_THRESHOLD 4095 // Soglia per attivare LED e speaker
+  #define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
 
   // Configurazione HTTP
   const char* serverName = "http://192.168.1.96:5000/sensor_data"; // URL del server Flask
