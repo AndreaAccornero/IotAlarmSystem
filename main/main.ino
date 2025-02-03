@@ -10,10 +10,10 @@
   #define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
 
   // Configurazione HTTP
-  const char* serverName = "http://192.168.1.96:5000/sensor_data"; // URL del server Flask
+  const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
 
   // Configurazione MQTT
-  const char* mqtt_server = "192.168.1.96"; // Indirizzo IP del broker MQTT
+  const char* mqtt_server = "192.168.1.124"; // Indirizzo IP del broker MQTT
   const int mqtt_port = 1883;               // Porta del broker MQTT
   const char* mqtt_topic = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
 
