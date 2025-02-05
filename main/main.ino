@@ -1,201 +1,217 @@
-  #include <WiFi.h>
-  #include <HTTPClient.h>
-  #include <PubSubClient.h>
-  #include <ArduinoJson.h>
-  #include "../credentials.h"
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+#include "../credentials.h"
 
-  #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
-  #define LED_BUILTIN 2          // Pin del LED integrato
-  #define SPEAKER_PIN 32         // Pin collegato allo speaker
-  #define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
+// Definizioni dei pin
+#define LED_PIN 2
+#define SPEAKER_PIN 32
 
-  // Configurazione HTTP
-  const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
+// Configurazione HTTP
+// const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
 
-  // Configurazione MQTT
-  const char* mqtt_server = "192.168.1.124"; // Indirizzo IP del broker MQTT
-  const int mqtt_port = 1883;               // Porta del broker MQTT
-  const char* mqtt_topic = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
+// Configurazione MQTT
+const char* mqtt_server = "192.168.1.124";
+const int mqtt_port = 1883;
+const char* mqtt_topic_new_alarm = "iot/bed_alarm/new_alarm";
+const char* mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm";
+const char* mqtt_topic_location = "iot/bed_alarm/location_alarm";  
 
-  WiFiClient espClient;          // Client WiFi
-  PubSubClient client(espClient); // Oggetto MQTT
+// Variabili globali
+bool stopAlarmFlag = false;
+bool alarmActive = false;
+String selectedSound = "sound1";  // Suono predefinito
+String currentLocation = "Bologna";  // Location predefinita
 
-  // Variabili globali
-  // unsigned long last_sample_time = 0;  // Memorizza il timestamp dell'ultima lettura
-  // unsigned long sampling_rate = 5000; // Intervallo tra le letture (in millisecondi)
-  bool alert_active = false;          // Stato attuale dell'allarme (LED e speaker)
+// Struttura per memorizzare una sveglia
+struct Alarm {
+  int hour;
+  int minute;
+  String frequency;
+  bool active;
+};
 
-  // Variabili globali per l'accumulo dei dati
-  unsigned long last_sample_time = 0;  // Timestamp dell'ultimo invio dei dati
-  unsigned long sampling_rate = 5000;  // Intervallo in millisecondi per il calcolo della media
-  long pressureSum = 0;              // Somma cumulativa delle letture
-  unsigned int pressureCount = 0;    // Numero di letture accumulate
+#define MAX_ALARMS 5
+Alarm alarms[MAX_ALARMS];
+int alarmCount = 0;
 
+WiFiClient espClient;
+PubSubClient client(espClient);
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600); // Fuso orario UTC+1 (Italia)
 
-  void setup() {
-    // Inizializzazione del monitor seriale per il debug
-    Serial.begin(115200);
-
-    // Configura i pin
-    pinMode(PRESSURE_SENSOR_PIN, INPUT);
-    pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(SPEAKER_PIN, OUTPUT);
-
-    // Connessione WiFi
-    connectToWiFi();
-
-    // Configurazione MQTT
-    client.setServer(mqtt_server, mqtt_port);
-    client.setCallback(mqttCallback); // Imposta la funzione di callback per i messaggi MQTT
-
-    connectToMQTT();
-
+// Funzione per connettersi alla rete WiFi
+void setup_wifi() {
+  Serial.print("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.print(".");
   }
+  Serial.println("\nConnected to WiFi!");
+}
 
-  
-  void loop() {
-    // Mantiene la connessione MQTT attiva
-    if (!client.connected()) {
-      connectToMQTT();
-    }
-    client.loop();
-
-    unsigned long current_time = millis(); // Ottiene il tempo corrente
-
-    // Legge il valore dal sensore ad ogni iterazione
-    int sensorValue = analogRead(PRESSURE_SENSOR_PIN);
-    // Serial.print("Valore del sensore: ");
-    // Serial.println(sensorValue);
-
-    // Accumula i valori
-    pressureSum += sensorValue;
-    pressureCount++;
-
-    // Se è trascorso l'intervallo di sampling_rate, calcola la media
-    if (current_time - last_sample_time >= sampling_rate) {
-      float pressureAverage = pressureSum / (float)pressureCount;
-      Serial.print("Media dei valori: ");
-      Serial.println(pressureAverage);
-
-      // Gestisce il LED e lo speaker in base al valore medio
-      handleAlert(pressureAverage);
-
-      // Invia i dati al server Flask (modifica il payload se necessario)
-      sendPressureData(pressureAverage);
-
-      // Resetta i contatori per il prossimo intervallo
-      pressureSum = 0;
-      pressureCount = 0;
-      last_sample_time = current_time;
-    }
-  }
-
-  void connectToWiFi() {
-    Serial.print("Connecting to WiFi");
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(1000);
-      Serial.print(".");
-    }
-    Serial.println("\nConnected to WiFi");
-  }
-
-  void connectToMQTT() {
-    while (!client.connected()) {
-      Serial.print("Connecting to MQTT...");
-      if (client.connect("ESP32Client")) { // Nome univoco per il dispositivo MQTT
-        Serial.println("connected");
-
-        // Sottoscrive al topic per ricevere aggiornamenti sul sampling_rate
-        client.subscribe(mqtt_topic);
-      } else {
-        Serial.print("failed, rc=");
-        Serial.print(client.state());
-        Serial.println(" trying again in 5 seconds");
-        delay(5000);
-      }
-    }
-  }
-
-  void mqttCallback(char* topic, byte* payload, unsigned int length) {
-    Serial.print("Message received on topic: ");
-    Serial.println(topic);
-
-    // Converte il payload in una stringa
-    char json[length + 1];
-    strncpy(json, (char*)payload, length);
-    json[length] = '\0'; // Termina la stringa
-
-    Serial.print("Message: ");
-    Serial.println(json);
-
-    // Parsing del JSON
-    StaticJsonDocument<200> doc; // Crea un buffer JSON con una dimensione adeguata
-    DeserializationError error = deserializeJson(doc, json);
-
-    if (error) {
-      Serial.print("Error parsing JSON: ");
-      Serial.println(error.c_str());
-      return;
-    }
-
-    // Estrae il valore di "sampling_rate"
-    if (doc.containsKey("sampling_rate")) {
-      int new_sampling_rate = doc["sampling_rate"];
-      sampling_rate = new_sampling_rate * 1000; // Moltiplica per 1000
-      Serial.print("Updated sampling_rate: ");
-      Serial.println(sampling_rate);
+// Funzione per riconnettersi al broker MQTT
+void reconnectMQTT() {
+  while (!client.connected()) {
+    Serial.print("Connecting to MQTT...");
+    if (client.connect("ESP32AlarmClient")) {
+      Serial.println(" connected");
+      client.subscribe(mqtt_topic_new_alarm);
+      client.subscribe(mqtt_topic_stop_alarm);
+      client.subscribe(mqtt_topic_location); 
     } else {
-      Serial.println("Key 'sampling_rate' not found in JSON");
+      Serial.print(" failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" retrying in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+// Callback MQTT per ricevere nuove sveglie, stop_alarm e location
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message received on topic: ");
+  Serial.println(topic);
+
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, payload, length);
+  if (error) {
+    Serial.print("JSON parsing error: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  if (strcmp(topic, mqtt_topic_new_alarm) == 0) {
+    if (alarmCount < MAX_ALARMS) {
+      alarms[alarmCount].hour = doc["alarm_time"].as<String>().substring(0, 2).toInt();
+      alarms[alarmCount].minute = doc["alarm_time"].as<String>().substring(3, 5).toInt();
+      alarms[alarmCount].frequency = doc["alarm_frequency"].as<String>();
+      alarms[alarmCount].active = true;
+      alarmCount++;
+      Serial.println("New alarm added.");
+    } else {
+      Serial.println("Max alarm limit reached!");
     }
   }
 
-  void sendPressureData(int pressureValue) {
-    if (WiFi.status() == WL_CONNECTED) {
-      HTTPClient http;
+  if (strcmp(topic, mqtt_topic_stop_alarm) == 0) {
+    if (doc.containsKey("stop_alarm")) {
+      stopAlarmFlag = doc["stop_alarm"];
+      Serial.print("Stop Alarm Received: ");
+      Serial.println(stopAlarmFlag);
+    }
+  }
 
-      // Configura la richiesta HTTP
-      http.begin(serverName);
-      http.addHeader("Content-Type", "application/json");
+  if (strcmp(topic, mqtt_topic_location) == 0) {
+    if (doc.containsKey("location")) {
+      currentLocation = doc["location"].as<String>();
+      Serial.print("Updated location: ");
+      Serial.println(currentLocation);
+    }
+  }
+}
 
-      // Crea il payload JSON
-      String payload = "{\"pressure_value\": " + String(pressureValue) + "}";
+// **Funzione che ottiene il meteo da OpenWeatherMap usando il nome della città**
+String getWeatherCondition(String city) {
+  HTTPClient http;
+  String api_url = "http://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + weather_api_key + "&units=metric";
 
-      // Invia la richiesta POST
-      int httpResponseCode = http.POST(payload);
+  http.begin(api_url);
+  int httpResponseCode = http.GET();
 
-      // Controlla la risposta del server
-      if (httpResponseCode > 0) {
-        String response = http.getString();
-        Serial.print("Data sent successfully. Response code: ");
-        Serial.println(httpResponseCode);
-      } else {
-        Serial.print("Error sending data. HTTP response code: ");
-        Serial.println(httpResponseCode);
-      }
+  if (httpResponseCode > 0) {
+    String payload = http.getString();
+    Serial.print("Weather API Response: ");
+    Serial.println(payload);
 
-      // Chiude la connessione HTTP
+    StaticJsonDocument<600> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+    if (!error) {
+      String weather_condition = doc["weather"][0]["main"].as<String>();
       http.end();
-    } else {
-      Serial.println("WiFi Disconnected");
+      return weather_condition;
     }
   }
 
-  void handleAlert(int pressureValue) {
-    if (pressureValue >= PRESSURE_THRESHOLD) {
-      // Attiva lo stato di allarme
-      alert_active = true;
-    } else {
-      // Disattiva lo stato di allarme se il valore è sotto la soglia
-      alert_active = false;
-    }
+  http.end();
+  return "Clear";  // Valore di default se la richiesta fallisce
+}
 
-    // Controlla lo stato dell'allarme per gestire LED e speaker
-    if (alert_active) {
-      digitalWrite(LED_BUILTIN, HIGH); // Accende il LED
-      tone(SPEAKER_PIN, 2000);         // Suona lo speaker a 2000 Hz
-    } else {
-      digitalWrite(LED_BUILTIN, LOW);  // Spegne il LED
-      noTone(SPEAKER_PIN);             // Ferma lo speaker
+// **Sceglie il suono della sveglia in base al meteo**
+void setAlarmSoundBasedOnWeather() {
+  Serial.print("Using location: ");
+  Serial.println(currentLocation);
+
+  String weather_condition = getWeatherCondition(currentLocation);
+  Serial.print("Weather Condition: ");
+  Serial.println(weather_condition);
+
+  if (weather_condition == "Clear") selectedSound = "sound1";  // Soleggiato = Energico
+  else if (weather_condition == "Clouds") selectedSound = "sound2";  // Nuvoloso = Medio
+  else if (weather_condition == "Rain") selectedSound = "sound3";  // Pioggia = Rilassante
+  else if (weather_condition == "Snow") selectedSound = "sound4";  // Neve = Dolce
+  else if (weather_condition == "Thunderstorm") selectedSound = "sound5";  // Temporale = Allerta
+  else selectedSound = "sound1";  // Default
+
+  Serial.print("Selected Alarm Sound: ");
+  Serial.println(selectedSound);
+}
+
+// Controlla se una sveglia deve attivarsi
+void checkAlarms() {
+  timeClient.update();
+  int currentHour = timeClient.getHours();
+  int currentMinute = timeClient.getMinutes();
+  bool anyAlarmActive = false;
+
+  for (int i = 0; i < alarmCount; i++) {
+    if (alarms[i].active && alarms[i].hour == currentHour && alarms[i].minute == currentMinute) {
+      anyAlarmActive = true;
+      Serial.println("Alarm triggered!");
+      setAlarmSoundBasedOnWeather();
     }
   }
+
+  if (anyAlarmActive) {
+    digitalWrite(LED_PIN, HIGH);
+    Serial.println("STA SUONANDO LA SVEGLIA!");
+    tone(SPEAKER_PIN, 2000);
+
+    if (stopAlarmFlag) {
+      digitalWrite(LED_PIN, LOW);
+      noTone(SPEAKER_PIN);
+      Serial.println("LA SVEGLIA SI È SPENTA!");
+
+      for (int i = 0; i < alarmCount; i++) {
+        if (alarms[i].active) alarms[i].active = false;
+      }
+      stopAlarmFlag = false;
+    }
+  } else {
+    digitalWrite(LED_PIN, LOW);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(SPEAKER_PIN, OUTPUT);
+  setup_wifi();
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqttCallback);
+  reconnectMQTT();
+  timeClient.begin();
+}
+
+void loop() {
+  if (!client.connected()) {
+    reconnectMQTT();
+  }
+  client.loop();
+  checkAlarms();
+  delay(1000);
+}

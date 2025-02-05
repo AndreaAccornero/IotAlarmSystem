@@ -25,7 +25,7 @@ mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"  # Corretto il nome della v
 
 # Nuovi topic MQTT per il nuovo allarme e la location
 mqtt_topic_new_alarm = "iot/bed_alarm/new_alarm"
-mqtt_topic_location = "iot/bed_alarm/location"
+mqtt_topic_location = "iot/bed_alarm/location_alarm"
 
 # Variabili globali
 sampling_rate = 15  # Intervallo tra le letture consecutive
