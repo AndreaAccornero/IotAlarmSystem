@@ -83,13 +83,8 @@
         <!-- Update Stop Alarm -->
         <form id="stopAlarmForm">
             <h3>Update Stop Alarm</h3>
-            <label for="stop_alarm">Stop Alarm:</label>
-            <select id="stop_alarm" name="stop_alarm">
-                <option value="false">false</option>
-                <option value="true">true</option>
-            </select>
-            <button type="button" onclick="updateStopAlarm()">Update Stop Alarm</button>
-            <p id="stopAlarmResponse"></p>
+            <button type="button" onclick="updateStopAlarm('true')">Stop Alarm</button>
+            <!-- <p id="stopAlarmResponse"></p> -->
         </form>
 
         <!-- Select Alarm Sound -->
@@ -130,6 +125,50 @@
             <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
             <p id="newAlarmResponse"></p>
         </form>
+
+        <!-- Set Location -->
+        <form id="locationForm">
+            <h3>Set Location</h3>
+            <label for="location">Location:</label>
+            <select id="location" name="location" required>
+            <option value="bologna">Bologna</option>
+            <option value="messina">Messina</option>
+            <option value="savona">Savona</option>
+            <option value="milano">Milano</option>
+            <option value="roma">Roma</option>
+            <option value="paris">Paris</option>
+            <option value="london">London</option>
+            <option value="new_york">New York</option>
+            <option value="los_angeles">Los Angeles</option>
+            <option value="chicago">Chicago</option>
+            <option value="miami">Miami</option>
+            <option value="other">Other</option>
+            </select>
+            <label for="other_location" id="otherLocationLabel" style="display:none;">Specify Location:</label>
+            <input type="text" id="other_location" name="other_location" style="display:none;" placeholder="Enter location">
+            <button type="button" onclick="setLocation()">Set Location</button>
+            <p id="locationResponse"></p>
+        </form>
+
+        <script>
+            document.getElementById('location').addEventListener('change', function() {
+            if (this.value === 'other') {
+                document.getElementById('other_location').style.display = 'block';
+                document.getElementById('otherLocationLabel').style.display = 'block';
+            } else {
+                document.getElementById('other_location').style.display = 'none';
+                document.getElementById('otherLocationLabel').style.display = 'none';
+            }
+            });
+
+            function setLocation() {
+            let location = document.getElementById("location").value;
+            if (location === 'other') {
+                location = document.getElementById("other_location").value;
+            }
+            sendPostRequest('/set_alarm_location', { location: location }, "locationResponse");
+            }
+        </script>
     </div>
 
     <script>
@@ -153,8 +192,8 @@
             sendPostRequest('/update_sampling_rate', { sampling_rate: samplingRate }, "samplingRateResponse");
         }
 
-        function updateStopAlarm() {
-            let stopAlarm = document.getElementById("stop_alarm").value;
+        function updateStopAlarm(stopAlarm) {
+            // let stopAlarm = document.getElementById("stop_alarm").value;
             sendPostRequest('/update_stop_alarm', { stop_alarm: stopAlarm }, "stopAlarmResponse");
         }
 
