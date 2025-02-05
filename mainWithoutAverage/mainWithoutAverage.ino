@@ -2,6 +2,8 @@
 #include <HTTPClient.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
 #include "../credentials.h"
 
 #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
@@ -9,11 +11,14 @@
 #define SPEAKER_PIN 32         // Pin collegato allo speaker
 #define PRESSURE_THRESHOLD 4095 // Soglia per attivare LED e speaker
 
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);
+
 // Configurazione HTTP
-const char* serverName = "http://192.168.1.96:5000/sensor_data"; // URL del server Flask
+const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
 
 // Configurazione MQTT
-const char* mqtt_server = "192.168.1.96"; // Indirizzo IP del broker MQTT
+const char* mqtt_server = "192.168.1.124"; // Indirizzo IP del broker MQTT
 const int mqtt_port = 1883;               // Porta del broker MQTT
 const char* mqtt_topic = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
 WiFiClient espClient;          // Client WiFi
@@ -41,6 +46,7 @@ void setup() {
   client.setCallback(mqttCallback); // Imposta la funzione di callback per i messaggi MQTT
 
   connectToMQTT();
+  timeClient.begin();
 
 }
 
@@ -64,6 +70,10 @@ void loop() {
     // Stampa il valore letto sul monitor seriale
     Serial.print("Valore del sensore: ");
     Serial.println(sensorValue);
+
+    timeClient.update();
+    Serial.print("Timestamp: ");
+    Serial.println(timeClient.getFormattedTime());
 
     // Gestisce il LED e lo speaker in base al valore del sensore
     handleAlert(sensorValue);

@@ -22,7 +22,7 @@ const char* mqtt_topic_location = "iot/bed_alarm/location_alarm";
 
 // Variabili globali
 bool stopAlarmFlag = false;
-bool alarmActive = false;
+bool anyAlarmPlaying = false;
 String selectedSound = "sound1";  // Suono predefinito
 String currentLocation = "Bologna";  // Location predefinita
 
@@ -32,6 +32,7 @@ struct Alarm {
   int minute;
   String frequency;
   bool active;
+  bool playing;
 };
 
 #define MAX_ALARMS 5
@@ -58,7 +59,7 @@ void setup_wifi() {
 void reconnectMQTT() {
   while (!client.connected()) {
     Serial.print("Connecting to MQTT...");
-    if (client.connect("ESP32AlarmClient")) {
+    if (client.connect("ESP32Client")) {
       Serial.println(" connected");
       client.subscribe(mqtt_topic_new_alarm);
       client.subscribe(mqtt_topic_stop_alarm);
@@ -91,8 +92,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       alarms[alarmCount].minute = doc["alarm_time"].as<String>().substring(3, 5).toInt();
       alarms[alarmCount].frequency = doc["alarm_frequency"].as<String>();
       alarms[alarmCount].active = true;
+      alarms[alarmCount].playing = false;
       alarmCount++;
       Serial.println("New alarm added.");
+      Serial.print("ORARIO SVEGLIA: ");
+      Serial.print(alarms[alarmCount].hour + ":" + alarms[alarmCount].minute);
     } else {
       Serial.println("Max alarm limit reached!");
     }
@@ -147,18 +151,19 @@ void setAlarmSoundBasedOnWeather() {
   Serial.println(currentLocation);
 
   String weather_condition = getWeatherCondition(currentLocation);
-  Serial.print("Weather Condition: ");
-  Serial.println(weather_condition);
+  // Serial.print("Weather Condition: ");
+  // Serial.println(weather_condition);
 
   if (weather_condition == "Clear") selectedSound = "sound1";  // Soleggiato = Energico
   else if (weather_condition == "Clouds") selectedSound = "sound2";  // Nuvoloso = Medio
   else if (weather_condition == "Rain") selectedSound = "sound3";  // Pioggia = Rilassante
+  else if (weather_condition == "Drizzle") selectedSound = "sound3";  // Piovigginoso = Rilassante
   else if (weather_condition == "Snow") selectedSound = "sound4";  // Neve = Dolce
   else if (weather_condition == "Thunderstorm") selectedSound = "sound5";  // Temporale = Allerta
   else selectedSound = "sound1";  // Default
 
-  Serial.print("Selected Alarm Sound: ");
-  Serial.println(selectedSound);
+  // Serial.print("Selected Alarm Sound: ");
+  // Serial.println(selectedSound);
 }
 
 // Controlla se una sveglia deve attivarsi
@@ -166,33 +171,39 @@ void checkAlarms() {
   timeClient.update();
   int currentHour = timeClient.getHours();
   int currentMinute = timeClient.getMinutes();
-  bool anyAlarmActive = false;
 
   for (int i = 0; i < alarmCount; i++) {
     if (alarms[i].active && alarms[i].hour == currentHour && alarms[i].minute == currentMinute) {
-      anyAlarmActive = true;
+      anyAlarmPlaying = true;
+      alarms[i].playing = true;
+      alarms[i].active = false;
+      stopAlarmFlag = false;
       Serial.println("Alarm triggered!");
       setAlarmSoundBasedOnWeather();
     }
   }
 
-  if (anyAlarmActive) {
+  if (anyAlarmPlaying) {
     digitalWrite(LED_PIN, HIGH);
     Serial.println("STA SUONANDO LA SVEGLIA!");
     tone(SPEAKER_PIN, 2000);
 
     if (stopAlarmFlag) {
-      digitalWrite(LED_PIN, LOW);
-      noTone(SPEAKER_PIN);
-      Serial.println("LA SVEGLIA SI È SPENTA!");
-
+      
       for (int i = 0; i < alarmCount; i++) {
-        if (alarms[i].active) alarms[i].active = false;
+        if (alarms[i].playing){
+          alarms[i].playing = false;
+
+          digitalWrite(LED_PIN, LOW);
+          noTone(SPEAKER_PIN);
+          Serial.println("LA SVEGLIA SI È SPENTA!");
+
+          stopAlarmFlag = false;
+          anyAlarmPlaying = false;
+        }
+
       }
-      stopAlarmFlag = false;
     }
-  } else {
-    digitalWrite(LED_PIN, LOW);
   }
 }
 
