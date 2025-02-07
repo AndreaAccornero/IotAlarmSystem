@@ -64,7 +64,6 @@ mqtt_client.loop_start()
 # Inizializza Flask
 app = Flask(__name__)
 
-
 def publish_with_retry(client, topic, message, max_retries=20, retry_delay=0.5):
     attempt = 0
     while attempt < max_retries:
@@ -84,8 +83,6 @@ def publish_with_retry(client, topic, message, max_retries=20, retry_delay=0.5):
 
     print(f"Errore: impossibile pubblicare su {topic} dopo {max_retries} tentativi.")
     return False   
-
-
 
 # Endpoint per aggiornare il sampling rate
 # Endpoint per aggiornare il sampling rate
@@ -192,7 +189,7 @@ def modify_alarm(alarm_id):
             alarm["alarm_frequency"] = data.get("alarm_frequency", alarm["alarm_frequency"])
             alarm["active"] = data.get("active", alarm["active"])
             save_alarms_to(alarm_filename, alarms)
-            return jsonify({"message": "Alarm updated successfully", "alarm": alarm}), 200
+            return jsonify({"message": "Alarm updated successfully", "alarm": alarm}), 201
 
     return jsonify({"error": "Alarm not found"}), 404
 
@@ -209,8 +206,18 @@ def remove_alarm(alarm_id):
     if len(alarms) == len1:
         return jsonify({"message": "Alarm was not deleted."}), 400
     save_alarms_to(alarm_filename, alarms)  # Save to file after deletion
-    return jsonify({"message": "Alarm deleted successfully"}), 200
+    return jsonify({"message": "Alarm deleted successfully"}), 201
 
+# Endpoint per eliminare tutte le sveglie
+@app.route('/remove_all_alarms', methods=['DELETE'])
+def remove_all_alarms():
+    '''
+    Deletes all alarms.
+    '''
+    global alarms
+    alarms = []
+    save_alarms_to(alarm_filename, alarms)  # Save to file after deletion
+    return jsonify({"message": "All alarms deleted successfully"}), 201
 
 # Endpoint per settare la location della sveglia
 @app.route('/set_alarm_location', methods=['POST'])
@@ -224,7 +231,7 @@ def set_alarm_location():
     # mqtt_client.loop(2)
     # print(f"Published alarm location: {location} to {mqtt_topic_location}")
     
-    return jsonify({"location": location, "status": "success"})
+    return jsonify({"location": location, "status": "success"}), 201
 
 # @app.route('/getWeather', methods=['GET'])
 # def get_weather():
@@ -254,7 +261,7 @@ def sensor_data():
                 print(f"Dato scritto: {point}")
             except Exception as e:
                 print(f"Errore durante la scrittura dei dati: {e}")
-    return "OK", 200
+    return "OK", 201
 
 def get_weather_conditions():
     """

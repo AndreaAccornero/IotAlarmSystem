@@ -152,6 +152,12 @@
             <p id="removeAlarmResponse"></p>
         </form>
 
+        <!-- Remove All Alarm -->
+        <form id="removeAllAlarmsForm">
+            <h3>Remove all Alarms</h3>
+            <button type="button" onclick="removeAllAlarms()">Clear</button>
+        </form>
+
         <!-- Set Location -->
         <form id="locationForm">
             <h3>Set Location</h3>
@@ -237,12 +243,10 @@
         }
 
         function setNewAlarm() {
-            // let alarmDate = document.getElementById("alarm_date").value;
             let alarmId = document.getElementById("alarm_id").value;
             let alarmTime = document.getElementById("alarm_time").value;
             let alarmFrequency = document.getElementById("alarm_frequency").value;
             sendPostRequest('/set_new_alarm', { 
-                // alarm_date: alarmDate, 
                 alarm_id: alarmId,
                 alarm_time: alarmTime, 
                 alarm_frequency: alarmFrequency 
@@ -266,6 +270,10 @@
         function removeAlarm() {
             let alarmId = document.getElementById("remove_alarm_id").value;
             sendDeleteRequest(`/remove_alarm/${alarmId}`, "removeAlarmResponse");
+        }
+
+        function removeAllAlarms() {
+            sendDeleteRequest('/remove_all_alarms', "removeAlarmResponse");
         }
 
         document.getElementById('location').addEventListener('change', function() {
