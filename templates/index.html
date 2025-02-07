@@ -1,3 +1,4 @@
+<!-- HTML con form per modificare ed eliminare una sveglia -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -60,12 +61,6 @@
         button:hover {
             background-color: #218838;
         }
-
-        p {
-            font-size: 14px;
-            color: #333;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -103,9 +98,8 @@
         <!-- Set New Alarm -->
         <form id="newAlarmForm">
             <h3>Set New Alarm</h3>
-            <!-- <label for="alarm_date">Alarm Date:</label>
-            <input type="date" id="alarm_date" name="alarm_date" required> -->
-
+            <label for="alarm_id">Alarm Label:</label>
+            <input type="text" id="alarm_id" name="alarm_id"  placeholder="Enter alarm_id" required>
             <label for="alarm_time">Alarm Time:</label>
             <input type="time" id="alarm_time" name="alarm_time" required>
 
@@ -113,18 +107,49 @@
             <select id="alarm_frequency" name="alarm_frequency">
                 <option value="once">Once</option>
                 <option value="everyday">Everyday</option>
-                <option value="weekdays">Weekdays (Mon-Fri)</option>
-                <option value="weekends">Weekends (Sat-Sun)</option>
-                <option value="monday">Every Monday</option>
-                <option value="tuesday">Every Tuesday</option>
-                <option value="wednesday">Every Wednesday</option>
-                <option value="thursday">Every Thursday</option>
-                <option value="friday">Every Friday</option>
-                <option value="saturday">Every Saturday</option>
-                <option value="sunday">Every Sunday</option>
+                <option value="weekdays">Weekdays</option>
+                <option value="weekends">Weekends</option>
             </select>
             <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
             <p id="newAlarmResponse"></p>
+        </form>
+        
+        <!-- Modify Alarm -->
+        <form id="modifyAlarmForm">
+            <h3>Modify Alarm</h3>
+            <label for="modify_alarm_id">Alarm ID:</label>
+            <input type="text" id="modify_alarm_id" name="alarm_id" placeholder="Enter alarm_id" required>
+            
+            <label for="modify_alarm_time">Alarm Time:</label>
+            <input type="time" id="modify_alarm_time" name="alarm_time">
+            
+            <label for="modify_alarm_frequency">Alarm Frequency:</label>
+            <select id="modify_alarm_frequency" name="alarm_frequency">
+                <option value="">No Change</option>
+                <option value="once">Once</option>
+                <option value="everyday">Everyday</option>
+                <option value="weekdays">Weekdays</option>
+                <option value="weekends">Weekends</option>
+            </select>
+            
+            <label for="modify_active">Active:</label>
+            <select id="modify_active" name="active">
+                <option value="">No Change</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+            
+            <button type="button" onclick="modifyAlarm()">Modify Alarm</button>
+            <p id="modifyAlarmResponse"></p>
+        </form>
+
+        <!-- Remove Alarm -->
+        <form id="removeAlarmForm">
+            <h3>Remove Alarm</h3>
+            <label for="remove_alarm_id">Alarm ID:</label>
+            <input type="text" id="remove_alarm_id" name="alarm_id"  placeholder="Enter alarm_id" required>
+            <button type="button" onclick="removeAlarm()">Remove Alarm</button>
+            <p id="removeAlarmResponse"></p>
         </form>
 
         <!-- Set Location -->
@@ -150,26 +175,6 @@
             <button type="button" onclick="setLocation()">Set Location</button>
             <p id="locationResponse"></p>
         </form>
-
-        <script>
-            document.getElementById('location').addEventListener('change', function() {
-            if (this.value === 'other') {
-                document.getElementById('other_location').style.display = 'block';
-                document.getElementById('otherLocationLabel').style.display = 'block';
-            } else {
-                document.getElementById('other_location').style.display = 'none';
-                document.getElementById('otherLocationLabel').style.display = 'none';
-            }
-            });
-
-            function setLocation() {
-            let location = document.getElementById("location").value;
-            if (location === 'other') {
-                location = document.getElementById("other_location").value;
-            }
-            sendPostRequest('/set_alarm_location', { location: location }, "locationResponse");
-            }
-        </script>
     </div>
 
     <script>
@@ -184,6 +189,35 @@
                 document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
             } catch (error) {
                 document.getElementById(responseElement).innerText = "Error sending request.";
+                console.error(error);
+            }
+        }
+
+        async function sendPutRequest(endpoint, data, responseElement) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
+            } catch (error) {
+                document.getElementById(responseElement).innerText = "Error updating data.";
+                console.error(error);
+            }
+        }
+
+        async function sendDeleteRequest(endpoint, responseElement) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
+            } catch (error) {
+                document.getElementById(responseElement).innerText = "Error deleting data.";
                 console.error(error);
             }
         }
@@ -204,14 +238,53 @@
 
         function setNewAlarm() {
             // let alarmDate = document.getElementById("alarm_date").value;
+            let alarmId = document.getElementById("alarm_id").value;
             let alarmTime = document.getElementById("alarm_time").value;
             let alarmFrequency = document.getElementById("alarm_frequency").value;
             sendPostRequest('/set_new_alarm', { 
                 // alarm_date: alarmDate, 
+                alarm_id: alarmId,
                 alarm_time: alarmTime, 
                 alarm_frequency: alarmFrequency 
             }, "newAlarmResponse");
         }
+
+        function modifyAlarm() {
+            let alarmId = document.getElementById("modify_alarm_id").value;
+            let alarmTime = document.getElementById("modify_alarm_time").value;
+            let alarmFrequency = document.getElementById("modify_alarm_frequency").value;
+            let active = document.getElementById("modify_active").value;
+
+            let data = {};
+            if (alarmTime) data.alarm_time = alarmTime;
+            if (alarmFrequency) data.alarm_frequency = alarmFrequency;
+            if (active) data.active = active;
+
+            sendPutRequest(`/update_alarm/${alarmId}`, data, "modifyAlarmResponse");
+        }
+
+        function removeAlarm() {
+            let alarmId = document.getElementById("remove_alarm_id").value;
+            sendDeleteRequest(`/remove_alarm/${alarmId}`, "removeAlarmResponse");
+        }
+
+        document.getElementById('location').addEventListener('change', function() {
+            if (this.value === 'other') {
+                document.getElementById('other_location').style.display = 'block';
+                document.getElementById('otherLocationLabel').style.display = 'block';
+            } else {
+                document.getElementById('other_location').style.display = 'none';
+                document.getElementById('otherLocationLabel').style.display = 'none';
+            }
+            });
+
+            function setLocation() {
+            let location = document.getElementById("location").value;
+            if (location === 'other') {
+                location = document.getElementById("other_location").value;
+            }
+            sendPostRequest('/set_alarm_location', { location: location }, "locationResponse");
+            }
 
         // Forza la cache a essere cancellata e assicura che le modifiche siano visibili
         window.onload = function() {
