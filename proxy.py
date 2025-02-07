@@ -64,6 +64,30 @@ mqtt_client.loop_start()
 # Inizializza Flask
 app = Flask(__name__)
 
+
+def publish_with_retry(client, topic, message, max_retries=20, retry_delay=0.5):
+    attempt = 0
+    while attempt < max_retries:
+        if client.is_connected():
+            client.loop()
+            result = client.publish(topic, json.dumps(message))
+            if result.rc == 0:
+                print(f"Messaggio pubblicato con successo su {topic}")
+                return True
+            else:
+                print(f"Errore nella pubblicazione su {topic}, codice {result.rc}. Tentativo {attempt+1}/{max_retries}")
+        else:
+            print("Errore: MQTT Client disconnesso. Riprovo...")
+
+        time.sleep(retry_delay)
+        attempt += 1
+
+    print(f"Errore: impossibile pubblicare su {topic} dopo {max_retries} tentativi.")
+    return False   
+
+
+
+# Endpoint per aggiornare il sampling rate
 # Endpoint per aggiornare il sampling rate
 @app.route('/update_sampling_rate', methods=['POST'])
 def update_sampling_rate():
@@ -71,15 +95,14 @@ def update_sampling_rate():
     data = request.json
     if 'sampling_rate' in data:
         sampling_rate = int(data['sampling_rate'])
-        mqtt_client.publish(mqtt_topic_sampling_rate, json.dumps({"sampling_rate": sampling_rate}))
-        #mqtt_client.loop(2)  # Forza il loop per inviare il messaggio
-        print(f"Published sampling_rate: {sampling_rate} to {mqtt_topic_sampling_rate}")
-    
+        publish_with_retry(mqtt_client, mqtt_topic_sampling_rate, {"sampling_rate": sampling_rate})
+
     print("------ Updated Sampling Rate ------")
     print(f"Sampling Rate: {sampling_rate} seconds")
     print("-----------------------------------")
-    
+
     return jsonify({"sampling_rate": sampling_rate, "status": "success"})
+
 
 # Endpoint per aggiornare lo stato di stop_alarm
 @app.route('/update_stop_alarm', methods=['POST'])
@@ -89,8 +112,7 @@ def update_stop_alarm():
     if 'stop_alarm' in data:
         # Confronta la stringa "true" per aggiornare la variabile booleana
         stop_alarm = data['stop_alarm'] == "true"
-        mqtt_client.publish(mqtt_topic_stop_alarm, json.dumps({"stop_alarm": stop_alarm}))
-        #mqtt_client.loop(2)
+        publish_with_retry(mqtt_client, mqtt_topic_stop_alarm, {"stop_alarm": stop_alarm})
         print(f"Published stop_alarm: {stop_alarm} to {mqtt_topic_stop_alarm}")
     
     print("------ Updated Stop Alarm ------")
@@ -107,8 +129,8 @@ def update_alarm_sound():
     if 'alarm_sound' in data:
         # Utilizza direttamente il valore stringa inviato dall'HTML ("sound1", "sound2", "sound3")
         alarm_sound = data['alarm_sound']
-        mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": alarm_sound}))
-        #mqtt_client.loop(2)
+
+        publish_with_retry(mqtt_client, mqtt_topic_alarm_sound, {"alarm_sound": alarm_sound})
         print(f"Published alarm_sound: {alarm_sound} to {mqtt_topic_alarm_sound}")
     
     print("------ Trigger alarm_sound ------")
@@ -289,18 +311,9 @@ def alarm_clock():
                         saved_time = current_time
                         # Attempt to get weather data
                         weather_sound = get_weather_conditions()
-                        mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": weather_sound}))
-                        #mqtt_client.loop(2)
-                        # print(mqtt_topic_trigger_alarm)
-                        # print(json.dumps({"trigger_alarm": "trigger_alarm"}))
-                        result = mqtt_client.publish(mqtt_topic_trigger_alarm, json.dumps({"trigger_alarm": "trigger_alarm"}))
-                        status = result.rc
-                        if status == 0:
-                            print(f"Messaggio pubblicato con successo su {mqtt_topic_trigger_alarm}")
-                        else:
-                            print(f"Errore nella pubblicazione su {mqtt_topic_trigger_alarm}, codice {status}")
+                        publish_with_retry(mqtt_client,mqtt_topic_alarm_sound,{"alarm_sound": weather_sound})
+                        publish_with_retry(mqtt_client,mqtt_topic_trigger_alarm,{"trigger_alarm": "trigger_alarm"})
 
-                        #mqtt_client.loop(2)
                         print(f"Alarm {alarm.get('alarm_id', 'unknown')} triggered at {current_time} on weekday {current_weekday}")
 
         
