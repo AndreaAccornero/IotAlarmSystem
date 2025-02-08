@@ -1,5 +1,6 @@
 from datetime import datetime
 import logging
+import random
 import threading
 import time
 from flask import Flask, request, jsonify, render_template
@@ -56,7 +57,7 @@ def on_connect(client, userdata, flags, rc):
     # Iscriviti al topic principale
     client.subscribe("iot/bed_alarm")
 
-mqtt_client = mqtt.Client("PythonClient")
+mqtt_client = mqtt.Client(f"PythonClient-{random.randint(1000, 9999)}")
 mqtt_client.on_connect = on_connect
 mqtt_client.connect(mqtt_broker, mqtt_port, 60)
 mqtt_client.loop_start()
@@ -64,27 +65,26 @@ mqtt_client.loop_start()
 # Inizializza Flask
 app = Flask(__name__)
 
-def publish_with_retry(client, topic, message, max_retries=20, retry_delay=0.5):
-    attempt = 0
-    while attempt < max_retries:
-        if client.is_connected():
-            client.loop()
-            result = client.publish(topic, json.dumps(message))
-            if result.rc == 0:
-                print(f"Messaggio pubblicato con successo su {topic}")
-                return True
-            else:
-                print(f"Errore nella pubblicazione su {topic}, codice {result.rc}. Tentativo {attempt+1}/{max_retries}")
-        else:
-            print("Errore: MQTT Client disconnesso. Riprovo...")
+# def publish_with_retry(client, topic, message, max_retries=20, retry_delay=0.5):
+#     attempt = 0
+#     while attempt < max_retries:
+#         if client.is_connected():
+#             client.loop()
+#             result = client.publish(topic, json.dumps(message))
+#             if result.rc == 0:
+#                 print(f"Messaggio pubblicato con successo su {topic}")
+#                 return True
+#             else:
+#                 print(f"Errore nella pubblicazione su {topic}, codice {result.rc}. Tentativo {attempt+1}/{max_retries}")
+#         else:
+#             print("Errore: MQTT Client disconnesso. Riprovo...")
 
-        time.sleep(retry_delay)
-        attempt += 1
+#         time.sleep(retry_delay)
+#         attempt += 1
 
-    print(f"Errore: impossibile pubblicare su {topic} dopo {max_retries} tentativi.")
-    return False   
+#     print(f"Errore: impossibile pubblicare su {topic} dopo {max_retries} tentativi.")
+#     return False   
 
-# Endpoint per aggiornare il sampling rate
 # Endpoint per aggiornare il sampling rate
 @app.route('/update_sampling_rate', methods=['POST'])
 def update_sampling_rate():
@@ -92,7 +92,7 @@ def update_sampling_rate():
     data = request.json
     if 'sampling_rate' in data:
         sampling_rate = int(data['sampling_rate'])
-        publish_with_retry(mqtt_client, mqtt_topic_sampling_rate, {"sampling_rate": sampling_rate})
+        mqtt_client.publish(mqtt_topic_sampling_rate, json.dumps({"sampling_rate": sampling_rate}))
 
     print("------ Updated Sampling Rate ------")
     print(f"Sampling Rate: {sampling_rate} seconds")
@@ -109,7 +109,7 @@ def update_stop_alarm():
     if 'stop_alarm' in data:
         # Confronta la stringa "true" per aggiornare la variabile booleana
         stop_alarm = data['stop_alarm'] == "true"
-        publish_with_retry(mqtt_client, mqtt_topic_stop_alarm, {"stop_alarm": stop_alarm})
+        mqtt_client.publish(mqtt_topic_stop_alarm, json.dumps({"stop_alarm": stop_alarm}))
         print(f"Published stop_alarm: {stop_alarm} to {mqtt_topic_stop_alarm}")
     
     print("------ Updated Stop Alarm ------")
@@ -127,7 +127,7 @@ def update_alarm_sound():
         # Utilizza direttamente il valore stringa inviato dall'HTML ("sound1", "sound2", "sound3")
         alarm_sound = data['alarm_sound']
 
-        publish_with_retry(mqtt_client, mqtt_topic_alarm_sound, {"alarm_sound": alarm_sound})
+        mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": alarm_sound}))
         print(f"Published alarm_sound: {alarm_sound} to {mqtt_topic_alarm_sound}")
     
     print("------ Trigger alarm_sound ------")
@@ -172,7 +172,7 @@ def set_new_alarm():
     # mqtt_client.loop(2)
     # print(f"Published new alarm configuration: {new_alarm_config} to {mqtt_topic_new_alarm}")
     
-    return jsonify({"message": "Alarm added successfully", "alarm": alarm}), 201
+    # return jsonify({"message": "Alarm added successfully", "alarm": alarm}), 201
 
 # Endpoint per modificare una sveglia
 @app.route('/update_alarm/<alarm_id>', methods=['PUT'])
@@ -187,7 +187,7 @@ def modify_alarm(alarm_id):
         if alarm["alarm_id"] == alarm_id:
             alarm["alarm_time"] = data.get("alarm_time", alarm["alarm_time"])
             alarm["alarm_frequency"] = data.get("alarm_frequency", alarm["alarm_frequency"])
-            alarm["active"] = data.get("active", alarm["active"])
+            alarm["active"] = data.get("active", str(alarm["active"])).lower() == "true"  # Convert to boolean
             save_alarms_to(alarm_filename, alarms)
             return jsonify({"message": "Alarm updated successfully", "alarm": alarm}), 201
 
@@ -318,8 +318,8 @@ def alarm_clock():
                         saved_time = current_time
                         # Attempt to get weather data
                         weather_sound = get_weather_conditions()
-                        publish_with_retry(mqtt_client,mqtt_topic_alarm_sound,{"alarm_sound": weather_sound})
-                        publish_with_retry(mqtt_client,mqtt_topic_trigger_alarm,{"trigger_alarm": "trigger_alarm"})
+                        mqtt_client.publish(mqtt_topic_alarm_sound,json.dumps({"alarm_sound": weather_sound}))
+                        mqtt_client.publish(mqtt_topic_trigger_alarm,json.dumps({"trigger_alarm": "trigger_alarm"}))
 
                         print(f"Alarm {alarm.get('alarm_id', 'unknown')} triggered at {current_time} on weekday {current_weekday}")
 
