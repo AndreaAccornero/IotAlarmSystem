@@ -300,7 +300,7 @@ def alarm_clock():
     while True:
         now = datetime.now()
         current_time = now.strftime("%H:%M")  # format: HH:MM
-        current_weekday = now.weekday()  # weekdays: 0-6 (Mon-Sun)
+        current_weekday = now.weekday()  # weekdays: 0 (Monday) - 6 (Sunday)
 
         for alarm in alarms:
             alarm_time = alarm.get("alarm_time")
@@ -308,23 +308,44 @@ def alarm_clock():
             alarm_frequency = alarm.get("alarm_frequency", "once")
 
             if alarm_active and alarm_time == current_time:
-                if alarm_frequency == "everyday" or \
-                   (alarm_frequency == "weekdays" and current_weekday < 5) or \
-                   (alarm_frequency == "weekends" and current_weekday >= 5) or \
-                   (alarm_frequency == "once" and saved_time != current_time):
-                    
-                    alarm_triggered = (saved_time == current_time)
-                    if not alarm_triggered:
-                        saved_time = current_time
-                        # Attempt to get weather data
-                        weather_sound = get_weather_conditions()
-                        mqtt_client.publish(mqtt_topic_alarm_sound,json.dumps({"alarm_sound": weather_sound}))
-                        mqtt_client.publish(mqtt_topic_trigger_alarm,json.dumps({"trigger_alarm": "trigger_alarm"}))
+                # Controllo della frequenza dell'allarme
+                should_trigger = False
+                
+                if alarm_frequency == "everyday":
+                    should_trigger = True
+                elif alarm_frequency == "weekdays" and current_weekday < 5:
+                    should_trigger = True
+                elif alarm_frequency == "weekends" and current_weekday >= 5:
+                    should_trigger = True
+                elif alarm_frequency == "once" and saved_time != current_time:
+                    should_trigger = True
+                    alarm["active"] = False  # Disattiva l'allarme dopo il trigger once
+                    save_alarms_to(alarm_filename, alarms)
+                elif alarm_frequency.startswith("every_"):
+                    # Mappa per controllare i giorni della settimana
+                    weekdays_map = {
+                        "every_monday": 0,
+                        "every_tuesday": 1,
+                        "every_wednesday": 2,
+                        "every_thursday": 3,
+                        "every_friday": 4,
+                        "every_saturday": 5,
+                        "every_sunday": 6
+                    }
+                    if weekdays_map.get(alarm_frequency) == current_weekday:
+                        should_trigger = True
 
-                        print(f"Alarm {alarm.get('alarm_id', 'unknown')} triggered at {current_time} on weekday {current_weekday}")
+                if should_trigger and saved_time != current_time:
+                    saved_time = current_time
+                    # Attempt to get weather data
+                    weather_sound = get_weather_conditions()
+                    mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": weather_sound}))
+                    mqtt_client.publish(mqtt_topic_trigger_alarm, json.dumps({"trigger_alarm": "trigger_alarm"}))
 
-        
+                    print(f"Alarm {alarm.get('alarm_id', 'unknown')} triggered at {current_time} on weekday {current_weekday}")
+
         time.sleep(10)  # check every 10 seconds, to make it less expensive
+
 
 # Pagina HTML principale
 @app.route('/')

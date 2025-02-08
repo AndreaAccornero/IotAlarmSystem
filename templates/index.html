@@ -105,10 +105,18 @@
 
             <label for="alarm_frequency">Alarm Frequency:</label>
             <select id="alarm_frequency" name="alarm_frequency">
+                <option value="">No Change</option>
                 <option value="once">Once</option>
                 <option value="everyday">Everyday</option>
                 <option value="weekdays">Weekdays</option>
                 <option value="weekends">Weekends</option>
+                <option value="every_monday">Every Monday</option>
+                <option value="every_tuesday">Every Tuesday</option>
+                <option value="every_wednesday">Every Wednesday</option>
+                <option value="every_thursday">Every Thursday</option>
+                <option value="every_friday">Every Friday</option>
+                <option value="every_saturday">Every Saturday</option>
+                <option value="every_sunday">Every Sunday</option>
             </select>
             <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
             <p id="newAlarmResponse"></p>
@@ -130,7 +138,15 @@
                 <option value="everyday">Everyday</option>
                 <option value="weekdays">Weekdays</option>
                 <option value="weekends">Weekends</option>
+                <option value="every_monday">Every Monday</option>
+                <option value="every_tuesday">Every Tuesday</option>
+                <option value="every_wednesday">Every Wednesday</option>
+                <option value="every_thursday">Every Thursday</option>
+                <option value="every_friday">Every Friday</option>
+                <option value="every_saturday">Every Saturday</option>
+                <option value="every_sunday">Every Sunday</option>
             </select>
+
             
             <label for="modify_active">Active:</label>
             <select id="modify_active" name="active">
