@@ -168,11 +168,10 @@ def set_new_alarm():
     return jsonify({"status": "success", "message": "Alarm set successfully"}), 201
 
     
-    # mqtt_client.publish(mqtt_topic_new_alarm, json.dumps(new_alarm_config))
-    # mqtt_client.loop(2)
-    # print(f"Published new alarm configuration: {new_alarm_config} to {mqtt_topic_new_alarm}")
-    
-    # return jsonify({"message": "Alarm added successfully", "alarm": alarm}), 201
+@app.route('/alarms', methods=['GET'])
+def get_alarms():
+    global alarms
+    return jsonify({"alarms": alarms}), 200  # Assicuriamoci che ritorni sempre un JSON valido
 
 # Endpoint per modificare una sveglia
 @app.route('/update_alarm/<alarm_id>', methods=['PUT'])
