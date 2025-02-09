@@ -5,3 +5,4 @@ tmp.ipynb
 dati.ipynb
 datisintetici.ipynb
 deleteData.ipynb
+*.pyc
