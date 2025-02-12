@@ -7,3 +7,5 @@ datisintetici.ipynb
 deleteData.ipynb
 *.pyc
 alarms.json
+generatedata.ipynb
+simulated_data_random.csv
