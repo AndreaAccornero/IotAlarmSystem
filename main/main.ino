@@ -7,17 +7,18 @@
   #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
   #define LED_BUILTIN 2          // Pin del LED integrato
   #define SPEAKER_PIN 32         // Pin collegato allo speaker
-  #define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
+  #define PRESSURE_THRESHOLD 0 // Soglia per attivare LED e speaker
 
   // Configurazione HTTP
-  const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
+  const char* serverName = "http://192.168.1.111:5000/sensor_data"; // URL del server Flask
 
   // Configurazione MQTT
-  const char* mqtt_server = "192.168.1.124"; // Indirizzo IP del broker MQTT
+  const char* mqtt_server = "192.168.1.111"; // Indirizzo IP del broker MQTT
   const int mqtt_port = 1883;               // Porta del broker MQTT
   const char* mqtt_topic_sampling_rate = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
   const char* mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"; // Topic per ricevere il nuovo sampling_rate
   const char* mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"; // Topic per ricevere il nuovo sampling_rate
+  const char* mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"  ; // Topic per ricevere il nuovo alarm_sound
 
   WiFiClient espClient;          // Client WiFi
   PubSubClient client(espClient); // Oggetto MQTT
@@ -32,7 +33,7 @@
   unsigned long sampling_rate = 5000;  // Intervallo in millisecondi per il calcolo della media
   long pressureSum = 0;              // Somma cumulativa delle letture
   unsigned int pressureCount = 0;    // Numero di letture accumulate
-
+  unsigned int alarm_sound = 1; 
 
   void setup() {
     // Inizializzazione del monitor seriale per il debug
@@ -114,6 +115,7 @@
         client.subscribe(mqtt_topic_trigger_alarm);
         // Sottoscrive ai topic per disattivare l'allarme
         client.subscribe(mqtt_topic_stop_alarm);
+        client.subscribe(mqtt_topic_alarm_sound);
       } else {
         Serial.print("failed, rc=");
         Serial.print(client.state());
@@ -160,6 +162,10 @@
         alert_active = false;
       }
     } 
+    if (doc.containsKey("alarm_sound")) {
+      int new_alarm_sound = doc["alarm_sound"];
+      alarm_sound = new_alarm_sound;
+      }
   }
 
   void sendPressureData(int pressureValue) {
@@ -194,21 +200,97 @@
   }
 
   void handleAlert(int pressureValue) {
-    // if (pressureValue >= PRESSURE_THRESHOLD) {
-    //   // Attiva lo stato di allarme
-    //   alert_active = true;
-    // } else {
-    //   // Disattiva lo stato di allarme se il valore è sotto la soglia
-    //   alert_active = false;
-    // }
 
-    // Controlla lo stato dell'allarme per gestire LED e speaker
+
+
     if (alert_active && pressureValue >= PRESSURE_THRESHOLD) {
       digitalWrite(LED_BUILTIN, HIGH); // Accende il LED
-      tone(SPEAKER_PIN, 2000);         // Suona lo speaker a 2000 Hz
+      playMelody(alarm_sound);     // Suona lo speaker a 2000 Hz
     } else {
       digitalWrite(LED_BUILTIN, LOW);  // Spegne il LED
       noTone(SPEAKER_PIN);             // Ferma lo speaker
       alert_active = false;            // Disattiva lo stato di allarme
     }
   }
+
+  void playMelody(int soundType) {
+    switch (soundType) {
+        case 1: // Clear (Soleggiato) - Energico
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            Serial.print("Sta suonando il suono 1");
+            break;
+
+        case 2: // Clouds (Nuvoloso) - Medio
+            tone(SPEAKER_PIN, 800, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 900, 300);
+            tone(SPEAKER_PIN, 800, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 900, 300);
+            tone(SPEAKER_PIN, 800, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 900, 300);
+            tone(SPEAKER_PIN, 800, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 900, 300);
+            tone(SPEAKER_PIN, 800, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 900, 300);
+            tone(SPEAKER_PIN, 800, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 900, 300);
+            delay(350);
+            break;
+
+        case 3: // Rain/Drizzle (Pioggia/Piovigginoso) - Rilassante
+            tone(SPEAKER_PIN, 500, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 600, 400);
+            delay(450);
+            break;
+
+        case 4: // Thunderstorm (Temporale) - Allerta
+            tone(SPEAKER_PIN, 2000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 2500, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 3000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 1500, 300);
+            delay(350);
+            break;
+
+        default:
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            break;
+            break;
+    }
+}

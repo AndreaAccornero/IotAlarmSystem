@@ -16,7 +16,7 @@ from utils import get_weather_data, load_alarms_from, save_alarms_to
 load_dotenv(".env")
 
 # Configurazione API_KEY OpenWeatherMap
-WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+WEATHER_API_KEY = os.getenv("weather_api_key")
 
 # Configurazione di InfluxDB
 token = os.getenv("token")
@@ -34,14 +34,11 @@ mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"
 mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"  
 mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"
 
-# Nuovi topic MQTT per il nuovo allarme e la location
-# mqtt_topic_new_alarm = "iot/bed_alarm/new_alarm"
-# mqtt_topic_location = "iot/bed_alarm/location_alarm"
 
 # Variabili globali
 sampling_rate = 15  # Intervallo tra le letture consecutive
 stop_alarm = False
-alarm_sound = "sound1"  # Valore di default per l'allarme
+alarm_sound = 1  # Valore di default per l'allarme
 weather_location = "Bologna"  # Location di default
 alarm_filename = "alarms.json" # Nome del file per salvare gli allarmi
 alarms = []  # Lista degli allarmi
@@ -124,7 +121,6 @@ def update_alarm_sound():
     global alarm_sound
     data = request.json
     if 'alarm_sound' in data:
-        # Utilizza direttamente il valore stringa inviato dall'HTML ("sound1", "sound2", "sound3")
         alarm_sound = data['alarm_sound']
 
         mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": alarm_sound}))
@@ -267,24 +263,25 @@ def get_weather_conditions():
     Gets the weather conditions for the current location.
     """
     global weather_location, WEATHER_API_KEY
-
     if WEATHER_API_KEY:
         if weather_location:
+            print("Getting weather conditions...")
             weather_condition = get_weather_data(weather_location, WEATHER_API_KEY)
             sound_mapping = {
-                "Clear": "sound1",  # Soleggiato = Energico
-                "Clouds": "sound2",  # Nuvoloso = Medio
-                "Rain": "sound3",  # Pioggia = Rilassante
-                "Drizzle": "sound3",  # Piovigginoso = Rilassante
-                "Snow": "sound4",  # Neve = Dolce
-                "Thunderstorm": "sound5"  # Temporale = Allerta
+                "Clear": 1,  # Soleggiato = Energico
+                "Clouds": 2,  # Nuvoloso = Medio
+                "Mist": 2,  # Nuvoloso = Medio
+                "Rain": 3,  # Pioggia = Rilassante
+                "Drizzle": 3,  # Piovigginoso = Rilassante
+                "Snow": 3,  # Neve = Dolce
+                "Thunderstorm": 4  # Temporale = Allerta
             }
 
-            selected_sound = sound_mapping.get(weather_condition, "sound1")  # Default: sound1
+            selected_sound = sound_mapping.get(weather_condition, 1)  
             print(f"Condizione meteo: {weather_condition}, Suono selezionato: {selected_sound}")
             return selected_sound
         
-    return "sound1"  # Default sound
+    return 1  # Default sound
 
 # ----- Alarm clock thread -----
 def alarm_clock():
@@ -340,6 +337,7 @@ def alarm_clock():
                     weather_sound = get_weather_conditions()
                     mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": weather_sound}))
                     mqtt_client.publish(mqtt_topic_trigger_alarm, json.dumps({"trigger_alarm": "trigger_alarm"}))
+
 
                     print(f"Alarm {alarm.get('alarm_id', 'unknown')} triggered at {current_time} on weekday {current_weekday}")
 
