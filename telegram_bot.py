@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import os
 import json
 import aiohttp
@@ -45,6 +46,17 @@ async def safe_delete(message):
 def back_to_menu_keyboard():
     """Restituisce un inline keyboard con il pulsante per tornare al menu principale."""
     return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Torna al Menu", callback_data="main_menu")]])
+
+def validate_time_format(time_str: str) -> bool:
+    """
+    Controlla se la stringa è nel formato HH:MM e se rappresenta un orario valido.
+    Restituisce True se valida, altrimenti False.
+    """
+    try:
+        datetime.strptime(time_str, "%H:%M")
+        return True
+    except ValueError:
+        return False
 
 # ===================== COMANDO /START E MENU PRINCIPALE =====================
 
@@ -107,19 +119,46 @@ async def receive_alarm_id(update: Update, context: CallbackContext) -> int:
     return CHOOSING_TIME
 
 async def receive_time(update: Update, context: CallbackContext) -> int:
-    """Salva l'orario inserito e chiede la frequenza."""
+    """Salva l'orario inserito e chiede la frequenza, dopo aver validato il formato."""
     user_data = context.user_data
-    user_data["time"] = update.message.text.strip()
+    time_input = update.message.text.strip()
+    if not validate_time_format(time_input):
+        await update.message.reply_text(
+            "❌ L'orario inserito non è valido. Assicurati di utilizzare il formato HH:MM con ore (00-23) e minuti (00-59).",
+            reply_markup=back_to_menu_keyboard()
+        )
+        # Ritorna lo stato CHOOSING_TIME per permettere di reinserire l'orario
+        return CHOOSING_TIME
+    user_data["time"] = time_input
     await update.message.reply_text(
-        "📅 **Scrivi la frequenza della sveglia (es. everyday, once, weekdays, weekends, every_monday, ecc.):**",
+        "📅 **Scrivi la frequenza della sveglia (es. everyday, once, weekdays, weekends, "
+        "every_monday, every_tuesday, every_wednesday, every_thursday, every_friday, every_saturday, every_sunday):**",
         reply_markup=back_to_menu_keyboard()
     )
     return CHOOSING_FREQUENCY
 
 async def receive_frequency(update: Update, context: CallbackContext) -> int:
-    """Salva la frequenza e completa il flusso (creazione o modifica)."""
+    """Salva la frequenza e completa il flusso (creazione o modifica). Se la frequenza non è valida, chiede di reinserirla."""
     user_data = context.user_data
-    user_data["frequency"] = update.message.text.strip()
+    freq_input = update.message.text.strip()
+    # Definisce l'insieme dei valori ammessi
+    allowed_frequencies = {
+        "everyday", "once", "weekdays", "weekends",
+        "every_monday", "every_tuesday", "every_wednesday",
+        "every_thursday", "every_friday", "every_saturday", "every_sunday"
+    }
+    if freq_input not in allowed_frequencies:
+        await update.message.reply_text(
+            "❌ Errore: frequenza non valida. Le frequenze valide sono: everyday, once, weekdays, weekends, "
+            "every_monday, every_tuesday, every_wednesday, every_thursday, every_friday, every_saturday, every_sunday.\n"
+            "Per favore, inserisci nuovamente la frequenza:",
+            reply_markup=back_to_menu_keyboard()
+        )
+        # Ritorna lo stato CHOOSING_FREQUENCY per permettere di reinserire il valore corretto
+        return CHOOSING_FREQUENCY
+
+    # Se il valore è valido, lo salva e prosegue
+    user_data["frequency"] = freq_input
     chat_id = update.message.chat_id
     if user_data.get("action") == "create":
         payload = {
@@ -172,6 +211,7 @@ async def receive_frequency(update: Update, context: CallbackContext) -> int:
         return ConversationHandler.END
 
     return ConversationHandler.END
+
 
 # ===================== MODIFICA DELLA SVEGLIA =====================
 
@@ -319,7 +359,7 @@ async def cancel(update: Update, context: CallbackContext) -> int:
     await main_menu(update, context)
     return ConversationHandler.END
 
-# ===================== HANDLER DI ERRORE (FACOLTATIVO) =====================
+# ===================== HANDLER DI ERRORE =====================
 
 async def error_handler(update: object, context: CallbackContext) -> None:
     logging.error(msg="Exception while handling an update:", exc_info=context.error)
