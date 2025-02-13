@@ -147,7 +147,7 @@ def set_new_alarm():
 @app.route('/alarms', methods=['GET'])
 def get_alarms():
     global alarms
-    return jsonify({"alarms": alarms}), 201 
+    return jsonify({"alarms": alarms}), 201
 
 
 # Endpoint per modificare una sveglia
@@ -165,7 +165,7 @@ def modify_alarm(alarm_id):
             save_alarms_to(alarm_filename, alarms)
             return jsonify({"message": "Alarm updated successfully", "alarm": alarm}), 201
 
-    return jsonify({"error": "Alarm not found"}), 404
+    return jsonify({"error": "Alarm not found"}), 400
 
 
 # Endpoint per eliminare una sveglia

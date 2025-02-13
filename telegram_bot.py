@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime
 import os
-import json
 import aiohttp
 import nest_asyncio
 import logging
@@ -13,7 +12,7 @@ from telegram.ext import (
 )
 from telegram.error import BadRequest
 
-# Carica le variabili d'ambiente
+# Caricamento delle variabili d'ambiente
 load_dotenv(".env")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 FLASK_SERVER_URL = os.getenv("FLASK_SERVER_URL")
@@ -21,7 +20,7 @@ FLASK_SERVER_URL = os.getenv("FLASK_SERVER_URL")
 # Stati della conversazione
 CHOOSING_ALARM_ID, CHOOSING_TIME, CHOOSING_FREQUENCY, MODIFY_ALARM, REMOVE_ALARM = range(5)
 
-# Configura logging
+# Configurazione logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
@@ -29,7 +28,7 @@ logging.basicConfig(
 # ===================== FUNZIONI HELPER =====================
 
 def get_chat_id(update: Update) -> int:
-    """Recupera il chat_id dall'update (sia per callback che per messaggio diretto)."""
+    """Recupera il chat_id"""
     if update.callback_query and update.callback_query.message:
         return update.callback_query.message.chat_id
     elif update.effective_chat:
@@ -48,10 +47,7 @@ def back_to_menu_keyboard():
     return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Torna al Menu", callback_data="main_menu")]])
 
 def validate_time_format(time_str: str) -> bool:
-    """
-    Controlla se la stringa è nel formato HH:MM e se rappresenta un orario valido.
-    Restituisce True se valida, altrimenti False.
-    """
+    """Funzione per controllare se la stringa relativa alla sveglia è nel formato HH:MM e se rappresenta un orario valido."""
     try:
         datetime.strptime(time_str, "%H:%M")
         return True
@@ -61,7 +57,7 @@ def validate_time_format(time_str: str) -> bool:
 # ===================== COMANDO /START E MENU PRINCIPALE =====================
 
 async def start(update: Update, context: CallbackContext) -> None:
-    """Comando /start: mostra il menu principale."""
+    """Comando "/start": mostra il menu principale."""
     await main_menu(update, context)
 
 async def main_menu(update: Update, context: CallbackContext) -> None:
@@ -92,7 +88,7 @@ async def main_menu(update: Update, context: CallbackContext) -> None:
 # ===================== CREAZIONE DELLA SVEGLIA =====================
 
 async def start_setting_alarm(update: Update, context: CallbackContext) -> int:
-    """Avvia la creazione della sveglia impostando l'azione 'create'."""
+    """Avvia la creazione della sveglia"""
     chat_id = get_chat_id(update)
     await update.callback_query.answer()
     if update.callback_query.message:
@@ -122,7 +118,7 @@ async def receive_time(update: Update, context: CallbackContext) -> int:
     """Salva l'orario inserito e chiede la frequenza, dopo aver validato il formato."""
     user_data = context.user_data
     time_input = update.message.text.strip()
-    if not validate_time_format(time_input):
+    if not validate_time_format(time_input): # Validazione del formato dell'orario
         await update.message.reply_text(
             "❌ L'orario inserito non è valido. Assicurati di utilizzare il formato HH:MM con ore (00-23) e minuti (00-59).",
             reply_markup=back_to_menu_keyboard()
@@ -160,7 +156,7 @@ async def receive_frequency(update: Update, context: CallbackContext) -> int:
     # Se il valore è valido, lo salva e prosegue
     user_data["frequency"] = freq_input
     chat_id = update.message.chat_id
-    if user_data.get("action") == "create":
+    if user_data.get("action") == "create": # Creazione della sveglia
         payload = {
             "alarm_id": user_data["alarm_id"],
             "alarm_time": user_data["time"],
@@ -169,7 +165,7 @@ async def receive_frequency(update: Update, context: CallbackContext) -> int:
         url = f"{FLASK_SERVER_URL}/set_new_alarm"
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload) as resp:
-                if resp.status == 400:
+                if resp.status == 400: # Errore: ID già esistente
                     error_data = await resp.json()
                     await context.bot.send_message(
                         chat_id=chat_id,
@@ -190,7 +186,7 @@ async def receive_frequency(update: Update, context: CallbackContext) -> int:
         )
         return ConversationHandler.END
 
-    elif user_data.get("action") == "modify":
+    elif user_data.get("action") == "modify": # Modifica della sveglia
         payload = {
             "alarm_time": user_data["time"],
             "alarm_frequency": user_data["frequency"]
@@ -198,7 +194,16 @@ async def receive_frequency(update: Update, context: CallbackContext) -> int:
         url = f"{FLASK_SERVER_URL}/update_alarm/{user_data['alarm_id']}"
         async with aiohttp.ClientSession() as session:
             async with session.put(url, json=payload) as resp:
-                await resp.json()
+                if resp.status == 400 or resp.status == 404: # Errore: ID non trovato
+                    error_data = await resp.json()
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=f"❌ Errore: {error_data.get('message', 'ID NON TROVATO.')}",
+                        reply_markup=back_to_menu_keyboard()
+                    )
+                    return ConversationHandler.END
+                else:
+                    await resp.json()
         await context.bot.send_message(
             chat_id=chat_id,
             text=(
@@ -216,7 +221,7 @@ async def receive_frequency(update: Update, context: CallbackContext) -> int:
 # ===================== MODIFICA DELLA SVEGLIA =====================
 
 async def modify_alarm(update: Update, context: CallbackContext) -> int:
-    """Avvia il flusso di modifica impostando l'azione 'modify'."""
+    """Avvia il flusso di modifica."""
     chat_id = get_chat_id(update)
     await update.callback_query.answer()
     if update.callback_query.message:
@@ -237,7 +242,7 @@ async def modify_alarm_id(update: Update, context: CallbackContext) -> int:
         "⏳ **Scrivi il nuovo orario della sveglia (formato HH:MM):**",
         reply_markup=back_to_menu_keyboard()
     )
-    return CHOOSING_TIME
+    return CHOOSING_TIME # Stesso pipeline della creazione di una sveglia
 
 # ===================== RIMOZIONE DI UNA SVEGLIA =====================
 
@@ -261,8 +266,8 @@ async def confirm_removal(update: Update, context: CallbackContext) -> int:
     async with aiohttp.ClientSession() as session:
         async with session.delete(url) as resp:
             data = await resp.json()
-            if resp.status == 400:
-                # L'endpoint ha restituito un errore (es. ID non esistente)
+            if resp.status == 400 or resp.status == 404:
+                # L'endpoint ha restituito un errore
                 await update.message.reply_text(
                     f"❌ Errore: {data.get('message', 'Sveglia non trovata.')}",
                     reply_markup=back_to_menu_keyboard()
@@ -320,7 +325,7 @@ async def list_alarms(update: Update, context: CallbackContext) -> None:
             result = await resp.json()
             status = resp.status
 
-    if status == 200:
+    if status == 200 or status == 201:
         alarms_list = result.get("alarms", [])
         if not alarms_list:
             message = "⚠️ **Nessuna sveglia impostata.**"
@@ -340,7 +345,7 @@ async def list_alarms(update: Update, context: CallbackContext) -> None:
         reply_markup=back_to_menu_keyboard()
     )
 
-# ===================== CANCELLAZIONE =====================
+# ===================== CANCELLAZIONE DELL'OPERAZIONE =====================
 
 async def cancel(update: Update, context: CallbackContext) -> int:
     """Annulla l'operazione in corso e torna al menu principale."""
@@ -367,24 +372,25 @@ async def error_handler(update: object, context: CallbackContext) -> None:
 # ===================== AVVIO DEL BOT =====================
 
 async def main():
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build() # Inizializzazione del bot
 
-    conv_handler = ConversationHandler(
-        entry_points=[
+    conv_handler = ConversationHandler( # Creazione del ConversationHandler
+        entry_points=[ 
             CallbackQueryHandler(start_setting_alarm, pattern="^set_alarm$"),
             CallbackQueryHandler(modify_alarm, pattern="^modify_alarm$"),
             CallbackQueryHandler(remove_alarm, pattern="^remove_alarm$")
         ],
-        states={
+        states={ # Definizione degli stati della conversazione
             CHOOSING_ALARM_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_alarm_id)],
             MODIFY_ALARM: [MessageHandler(filters.TEXT & ~filters.COMMAND, modify_alarm_id)],
             CHOOSING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_time)],
             CHOOSING_FREQUENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_frequency)],
             REMOVE_ALARM: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_removal)]
         },
-        fallbacks=[CallbackQueryHandler(cancel, pattern="^cancel$")]
+        fallbacks=[CallbackQueryHandler(cancel, pattern="^cancel$")] 
     )
 
+    # Aggiunta degli handler al bot
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(main_menu, pattern="^main_menu$"))
@@ -395,7 +401,7 @@ async def main():
 
     application.add_error_handler(error_handler)
 
-    await application.run_polling()
+    await application.run_polling() # Avvio del bot
 
 if __name__ == "__main__":
     nest_asyncio.apply()
