@@ -1,319 +1,352 @@
-<!-- HTML con form per modificare ed eliminare una sveglia -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IoT Alarm Configurator</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 20px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IoT Alarm Configurator</title>
+  <style>
+    /* Stile base */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
 
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 20px;
-        }
+    /* Titolo centrato */
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
-        .container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
+    /* Container principale come griglia, 3 colonne */
+    .container {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 20px;
+      justify-content: center;  /* Centra le colonne orizzontalmente */
+      align-items: start;
+      margin: 0 auto;
+    }
 
-        form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
+    /* Stile "card" per i form singoli */
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      width: 300px;       /* Larghezza fissa */
+      box-sizing: border-box;
+      text-align: left;   /* Allinea etichette e input a sinistra */
+    }
 
-        label {
-            font-weight: bold;
-            display: block;
-            margin: 10px 0 5px;
-        }
+    /* Box unico per Remove Alarms */
+    .removeAlarmsBox {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      width: 300px;
+      box-sizing: border-box;
+      text-align: left;
+    }
+    /* Le form interne di Remove Alarms non creano ulteriori box */
+    .removeAlarmsBox form {
+      background: transparent;
+      box-shadow: none;
+      margin: 0;
+      padding: 0;
+    }
 
-        input, select, button {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
+    .removeAlarmsBox h3 {
+      margin-top: 0;
+    }
+    .removeAlarmsBox hr {
+      margin: 20px 0;
+    }
 
-        button {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-            margin-top: 10px;
-        }
+    /* Label e campi di input */
+    label {
+      font-weight: bold;
+      display: block;
+      margin: 10px 0 5px;
+    }
 
-        button:hover {
-            background-color: #218838;
-        }
-    </style>
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    /* Forza il testo di risposta ad andare a capo e restare nella box */
+    p[id$="Response"] {
+      white-space: pre-wrap;      /* Mantiene a capo e spazi */
+      word-wrap: break-word;      /* Forza il wrap su parole lunghe */
+      overflow-wrap: break-word;
+      /* Se vuoi limitare l'altezza e scrollare, decommenta:
+      max-height: 80px;
+      overflow-y: auto;
+      */
+      margin-top: 10px;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
-    <h1>IoT Bed Alarm Configuration</h1>
-    <div class="container">
-        <!-- Update Sampling Rate -->
-        <form id="samplingRateForm">
-            <h3>Update Sampling Rate</h3>
-            <label for="sampling_rate">Sampling Rate (seconds):</label>
-            <input type="number" id="sampling_rate" name="sampling_rate" placeholder="Enter sampling rate" required>
-            <button type="button" onclick="updateSamplingRate()">Update Sampling Rate</button>
-            <p id="samplingRateResponse"></p>
-        </form>
+  <h1>IoT Bed Alarm Configuration</h1>
 
+  <div class="container">
+    <!-- 1) Update Sampling Rate -->
+    <form id="samplingRateForm" class="card">
+      <h3>Update Sampling Rate</h3>
+      <label for="sampling_rate">Sampling Rate (seconds):</label>
+      <input type="number" id="sampling_rate" name="sampling_rate" placeholder="Enter sampling rate" required>
+      <button type="button" onclick="updateSamplingRate()">Update Sampling Rate</button>
+      <p id="samplingRateResponse"></p>
+    </form>
 
-        <!-- Update Stop Alarm -->
-        <form id="stopAlarmForm">
-            <h3>Update Stop Alarm</h3>
-            <button type="button" onclick="updateStopAlarm('true')">Stop Alarm</button>
-        </form>
+    <!-- 2) Stop Alarm -->
+    <form id="stopAlarmForm" class="card">
+      <h3>Stop Alarm</h3>
+      <button type="button" onclick="updateStopAlarm('true')">Stop Alarm</button>
+      <p id="stopAlarmResponse"></p>
+    </form>
 
+    <!-- 3) Set New Alarm -->
+    <form id="newAlarmForm" class="card">
+      <h3>Set New Alarm</h3>
+      <label for="alarm_id">Alarm Label:</label>
+      <input type="text" id="alarm_id" name="alarm_id"  placeholder="Enter alarm_id" required>
+      <label for="alarm_time">Alarm Time:</label>
+      <input type="time" id="alarm_time" name="alarm_time" required>
+      <label for="alarm_frequency">Alarm Frequency:</label>
+      <select id="alarm_frequency" name="alarm_frequency">
+        <option value="once">Once</option>
+        <option value="everyday">Everyday</option>
+        <option value="weekdays">Weekdays</option>
+        <option value="weekends">Weekends</option>
+        <option value="every_monday">Every Monday</option>
+        <option value="every_tuesday">Every Tuesday</option>
+        <option value="every_wednesday">Every Wednesday</option>
+        <option value="every_thursday">Every Thursday</option>
+        <option value="every_friday">Every Friday</option>
+        <option value="every_saturday">Every Saturday</option>
+        <option value="every_sunday">Every Sunday</option>
+      </select>
+      <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
+      <p id="newAlarmResponse"></p>
+    </form>
 
-        <!-- Set New Alarm -->
-        <form id="newAlarmForm">
-            <h3>Set New Alarm</h3>
-            <label for="alarm_id">Alarm Label:</label>
-            <input type="text" id="alarm_id" name="alarm_id"  placeholder="Enter alarm_id" required>
-            <label for="alarm_time">Alarm Time:</label>
-            <input type="time" id="alarm_time" name="alarm_time" required>
+    <!-- 4) Modify Alarm -->
+    <form id="modifyAlarmForm" class="card">
+      <h3>Modify Alarm</h3>
+      <label for="modify_alarm_id">Alarm ID:</label>
+      <input type="text" id="modify_alarm_id" name="alarm_id" placeholder="Enter alarm_id" required>
+      
+      <label for="modify_alarm_time">Alarm Time:</label>
+      <input type="time" id="modify_alarm_time" name="alarm_time">
+      
+      <label for="modify_alarm_frequency">Alarm Frequency:</label>
+      <select id="modify_alarm_frequency" name="alarm_frequency">
+        <option value="">No Change</option>
+        <option value="once">Once</option>
+        <option value="everyday">Everyday</option>
+        <option value="weekdays">Weekdays</option>
+        <option value="weekends">Weekends</option>
+        <option value="every_monday">Every Monday</option>
+        <option value="every_tuesday">Every Tuesday</option>
+        <option value="every_wednesday">Every Wednesday</option>
+        <option value="every_thursday">Every Thursday</option>
+        <option value="every_friday">Every Friday</option>
+        <option value="every_saturday">Every Saturday</option>
+        <option value="every_sunday">Every Sunday</option>
+      </select>
 
-            <label for="alarm_frequency">Alarm Frequency:</label>
-            <select id="alarm_frequency" name="alarm_frequency">
-                <option value="once">Once</option>
-                <option value="everyday">Everyday</option>
-                <option value="weekdays">Weekdays</option>
-                <option value="weekends">Weekends</option>
-                <option value="every_monday">Every Monday</option>
-                <option value="every_tuesday">Every Tuesday</option>
-                <option value="every_wednesday">Every Wednesday</option>
-                <option value="every_thursday">Every Thursday</option>
-                <option value="every_friday">Every Friday</option>
-                <option value="every_saturday">Every Saturday</option>
-                <option value="every_sunday">Every Sunday</option>
-            </select>
-            <button type="button" onclick="setNewAlarm()">Set New Alarm</button>
-            <p id="newAlarmResponse"></p>
-        </form>
-        
+      <label for="modify_active">Active:</label>
+      <select id="modify_active" name="active">
+        <option value="">No Change</option>
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+      
+      <button type="button" onclick="modifyAlarm()">Modify Alarm</button>
+      <p id="modifyAlarmResponse"></p>
+    </form>
 
-        <!-- Modify Alarm -->
-        <form id="modifyAlarmForm">
-            <h3>Modify Alarm</h3>
-            <label for="modify_alarm_id">Alarm ID:</label>
-            <input type="text" id="modify_alarm_id" name="alarm_id" placeholder="Enter alarm_id" required>
-            
-            <label for="modify_alarm_time">Alarm Time:</label>
-            <input type="time" id="modify_alarm_time" name="alarm_time">
-            
-            <label for="modify_alarm_frequency">Alarm Frequency:</label>
-            <select id="modify_alarm_frequency" name="alarm_frequency">
-                <option value="">No Change</option>
-                <option value="once">Once</option>
-                <option value="everyday">Everyday</option>
-                <option value="weekdays">Weekdays</option>
-                <option value="weekends">Weekends</option>
-                <option value="every_monday">Every Monday</option>
-                <option value="every_tuesday">Every Tuesday</option>
-                <option value="every_wednesday">Every Wednesday</option>
-                <option value="every_thursday">Every Thursday</option>
-                <option value="every_friday">Every Friday</option>
-                <option value="every_saturday">Every Saturday</option>
-                <option value="every_sunday">Every Sunday</option>
-            </select>
+    <!-- 5) Box unico per Remove Alarm e Remove All Alarms -->
+    <div class="removeAlarmsBox">
+      <h3>Remove Alarms</h3>
 
-            <label for="modify_active">Active:</label>
-            <select id="modify_active" name="active">
-                <option value="">No Change</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-            </select>
-            
-            <button type="button" onclick="modifyAlarm()">Modify Alarm</button>
-            <p id="modifyAlarmResponse"></p>
-        </form>
+      <!-- Remove Alarm -->
+      <form id="removeAlarmForm">
+        <label for="remove_alarm_id">Alarm ID:</label>
+        <input type="text" id="remove_alarm_id" name="alarm_id" placeholder="Enter alarm_id" required>
+        <button type="button" onclick="removeAlarm()">Remove Alarm</button>
+        <p id="removeAlarmResponse"></p>
+      </form>
 
+      <hr>
 
-        <!-- Remove Alarm -->
-        <form id="removeAlarmForm">
-            <h3>Remove Alarm</h3>
-            <label for="remove_alarm_id">Alarm ID:</label>
-            <input type="text" id="remove_alarm_id" name="alarm_id"  placeholder="Enter alarm_id" required>
-            <button type="button" onclick="removeAlarm()">Remove Alarm</button>
-            <p id="removeAlarmResponse"></p>
-        </form>
-
-
-        <!-- Remove All Alarm -->
-        <form id="removeAllAlarmsForm">
-            <h3>Remove all Alarms</h3>
-            <button type="button" onclick="removeAllAlarms()">Clear</button>
-        </form>
-
-
-        <!-- Set Location -->
-        <form id="locationForm">
-            <h3>Set Location</h3>
-            <label for="location">Location:</label>
-            <select id="location" name="location" required>
-            <option value="bologna">Bologna</option>
-            <option value="messina">Messina</option>
-            <option value="savona">Savona</option>
-            <option value="milano">Milano</option>
-            <option value="roma">Roma</option>
-            <option value="paris">Paris</option>
-            <option value="london">London</option>
-            <option value="new_york">New York</option>
-            <option value="los_angeles">Los Angeles</option>
-            <option value="chicago">Chicago</option>
-            <option value="miami">Miami</option>
-            <option value="other">Other</option>
-            </select>
-            <label for="other_location" id="otherLocationLabel" style="display:none;">Specify Location:</label>
-            <input type="text" id="other_location" name="other_location" style="display:none;" placeholder="Enter location">
-            <button type="button" onclick="setLocation()">Set Location</button>
-            <p id="locationResponse"></p>
-        </form>
+      <!-- Remove All Alarms -->
+      <form id="removeAllAlarmsForm">
+        <button type="button" onclick="removeAllAlarms()">Remove All Alarms</button>
+        <p id="removeAllAlarmsResponse"></p>
+      </form>
     </div>
 
+    <!-- 6) Set Location (ultima box) -->
+    <form id="locationForm" class="card">
+      <h3>Set Location</h3>
+      <label for="location">Location:</label>
+      <select id="location" name="location" required>
+        <option value="bologna">Bologna</option>
+        <option value="messina">Messina</option>
+        <option value="savona">Savona</option>
+        <option value="milano">Milano</option>
+        <option value="roma">Roma</option>
+        <option value="paris">Paris</option>
+        <option value="london">London</option>
+        <option value="new_york">New York</option>
+        <option value="los_angeles">Los Angeles</option>
+        <option value="chicago">Chicago</option>
+        <option value="miami">Miami</option>
+        <option value="other">Other</option>
+      </select>
+      <label for="other_location" id="otherLocationLabel" style="display:none;">Specify Location:</label>
+      <input type="text" id="other_location" name="other_location" style="display:none;" placeholder="Enter location">
+      <button type="button" onclick="setLocation()">Set Location</button>
+      <p id="locationResponse"></p>
+    </form>
+  </div>
 
-    <script>
-        async function sendPostRequest(endpoint, data, responseElement) {
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
-            } catch (error) {
-                document.getElementById(responseElement).innerText = "Error sending request.";
-                console.error(error);
-            }
-        }
+  <script>
+    async function sendPostRequest(endpoint, data, responseElement) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
+      } catch (error) {
+        document.getElementById(responseElement).innerText = "Error sending request.";
+        console.error(error);
+      }
+    }
 
+    async function sendPutRequest(endpoint, data, responseElement) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
+      } catch (error) {
+        document.getElementById(responseElement).innerText = "Error updating data.";
+        console.error(error);
+      }
+    }
 
-        async function sendPutRequest(endpoint, data, responseElement) {
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
-            } catch (error) {
-                document.getElementById(responseElement).innerText = "Error updating data.";
-                console.error(error);
-            }
-        }
+    async function sendDeleteRequest(endpoint, responseElement) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
+      } catch (error) {
+        document.getElementById(responseElement).innerText = "Error deleting data.";
+        console.error(error);
+      }
+    }
 
+    function updateSamplingRate() {
+      let samplingRate = document.getElementById("sampling_rate").value;
+      sendPostRequest('/update_sampling_rate', { sampling_rate: samplingRate }, "samplingRateResponse");
+    }
 
-        async function sendDeleteRequest(endpoint, responseElement) {
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const result = await response.json();
-                document.getElementById(responseElement).innerText = `Success: ${JSON.stringify(result)}`;
-            } catch (error) {
-                document.getElementById(responseElement).innerText = "Error deleting data.";
-                console.error(error);
-            }
-        }
+    function updateStopAlarm(stopAlarm) {
+      sendPostRequest('/update_stop_alarm', { stop_alarm: stopAlarm }, "stopAlarmResponse");
+    }
 
+    function setNewAlarm() {
+      let alarmId = document.getElementById("alarm_id").value;
+      let alarmTime = document.getElementById("alarm_time").value;
+      let alarmFrequency = document.getElementById("alarm_frequency").value;
+      sendPostRequest('/set_new_alarm', { 
+          alarm_id: alarmId,
+          alarm_time: alarmTime,
+          alarm_frequency: alarmFrequency
+      }, "newAlarmResponse");
+    }
 
-        function updateSamplingRate() {
-            let samplingRate = document.getElementById("sampling_rate").value;
-            sendPostRequest('/update_sampling_rate', { sampling_rate: samplingRate }, "samplingRateResponse");
-        }
+    function modifyAlarm() {
+      let alarmId = document.getElementById("modify_alarm_id").value;
+      let alarmTime = document.getElementById("modify_alarm_time").value;
+      let alarmFrequency = document.getElementById("modify_alarm_frequency").value;
+      let active = document.getElementById("modify_active").value;
 
+      let data = {};
+      if (alarmTime) data.alarm_time = alarmTime;
+      if (alarmFrequency) data.alarm_frequency = alarmFrequency;
+      if (active) data.active = active;
 
-        function updateStopAlarm(stopAlarm) {
-            sendPostRequest('/update_stop_alarm', { stop_alarm: stopAlarm }, "stopAlarmResponse");
-        }
+      sendPutRequest(`/update_alarm/${alarmId}`, data, "modifyAlarmResponse");
+    }
 
+    function removeAlarm() {
+      let alarmId = document.getElementById("remove_alarm_id").value;
+      sendDeleteRequest(`/remove_alarm/${alarmId}`, "removeAlarmResponse");
+    }
 
-        function updateAlarmSound() {
-            let alarmSound = document.getElementById("alarm_sound").value;
-            sendPostRequest('/update_alarm_sound', { alarm_sound: alarmSound }, "alarmSoundResponse");
-        }
+    function removeAllAlarms() {
+      sendDeleteRequest('/remove_all_alarms', "removeAllAlarmsResponse");
+    }
 
+    document.getElementById('location').addEventListener('change', function() {
+      if (this.value === 'other') {
+        document.getElementById('other_location').style.display = 'block';
+        document.getElementById('otherLocationLabel').style.display = 'block';
+      } else {
+        document.getElementById('other_location').style.display = 'none';
+        document.getElementById('otherLocationLabel').style.display = 'none';
+      }
+    });
 
-        function setNewAlarm() {
-            let alarmId = document.getElementById("alarm_id").value;
-            let alarmTime = document.getElementById("alarm_time").value;
-            let alarmFrequency = document.getElementById("alarm_frequency").value;
-            sendPostRequest('/set_new_alarm', { 
-                alarm_id: alarmId,
-                alarm_time: alarmTime, 
-                alarm_frequency: alarmFrequency 
-            }, "newAlarmResponse");
-        }
+    function setLocation() {
+      let location = document.getElementById("location").value;
+      if (location === 'other') {
+        location = document.getElementById("other_location").value;
+      }
+      sendPostRequest('/set_alarm_location', { location: location }, "locationResponse");
+    }
 
-
-        function modifyAlarm() {
-            let alarmId = document.getElementById("modify_alarm_id").value;
-            let alarmTime = document.getElementById("modify_alarm_time").value;
-            let alarmFrequency = document.getElementById("modify_alarm_frequency").value;
-            let active = document.getElementById("modify_active").value;
-
-            let data = {};
-            if (alarmTime) data.alarm_time = alarmTime;
-            if (alarmFrequency) data.alarm_frequency = alarmFrequency;
-            if (active) data.active = active;
-
-            sendPutRequest(`/update_alarm/${alarmId}`, data, "modifyAlarmResponse");
-        }
-
-
-        function removeAlarm() {
-            let alarmId = document.getElementById("remove_alarm_id").value;
-            sendDeleteRequest(`/remove_alarm/${alarmId}`, "removeAlarmResponse");
-        }
-
-
-        function removeAllAlarms() {
-            sendDeleteRequest('/remove_all_alarms', "removeAlarmResponse");
-        }
-
-        document.getElementById('location').addEventListener('change', function() {
-            if (this.value === 'other') {
-                document.getElementById('other_location').style.display = 'block';
-                document.getElementById('otherLocationLabel').style.display = 'block';
-            } else {
-                document.getElementById('other_location').style.display = 'none';
-                document.getElementById('otherLocationLabel').style.display = 'none';
-            }
-            });
-
-            function setLocation() {
-            let location = document.getElementById("location").value;
-            if (location === 'other') {
-                location = document.getElementById("other_location").value;
-            }
-            sendPostRequest('/set_alarm_location', { location: location }, "locationResponse");
-            }
-
-        window.onload = function() {
-            console.log("Forcing cache refresh.");
-            fetch('/force_refresh').then(() => console.log("Cache refreshed."));
-        };
-    </script>
+    window.onload = function() {
+      console.log("Forcing cache refresh.");
+      fetch('/force_refresh').then(() => console.log("Cache refreshed."));
+    };
+  </script>
 </body>
 </html>
