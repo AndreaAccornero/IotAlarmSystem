@@ -82,19 +82,6 @@
             <!-- <p id="stopAlarmResponse"></p> -->
         </form>
 
-        <!-- Select Alarm Sound
-        <form id="alarmSoundForm">
-            <h3>Select Alarm Sound</h3>
-            <label for="alarm_sound">Alarm Sound:</label>
-            <select id="alarm_sound" name="alarm_sound">
-                <option value="1">Energico</option>
-                <option value="2">Medio</option>
-                <option value="3">Rilassante</option>
-                <option value="4">Allerta</option>
-            </select>
-            <button type="button" onclick="updateAlarmSound()">Update Alarm Sound</button>
-            <p id="alarmSoundResponse"></p>
-        </form> -->
 
         <!-- Set New Alarm -->
         <form id="newAlarmForm">
@@ -310,7 +297,6 @@
             sendPostRequest('/set_alarm_location', { location: location }, "locationResponse");
             }
 
-        // Forza la cache a essere cancellata e assicura che le modifiche siano visibili
         window.onload = function() {
             console.log("Forcing cache refresh.");
             fetch('/force_refresh').then(() => console.log("Cache refreshed."));

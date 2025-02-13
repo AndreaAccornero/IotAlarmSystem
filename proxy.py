@@ -9,8 +9,9 @@ import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 import os
 import json
-
 from utils import get_weather_data, load_alarms_from, save_alarms_to
+
+
 
 # Carica le variabili d'ambiente
 load_dotenv(".env")
@@ -22,9 +23,9 @@ WEATHER_API_KEY = os.getenv("weather_api_key")
 token = os.getenv("token")
 org = "IotAlarmSystem"
 bucket = "Prova"
-
 client = InfluxDBClient(url="http://localhost:8086", token=token, org=org)
 write_api = client.write_api(write_options=WriteOptions(batch_size=1))
+
 
 # Configurazione MQTT
 mqtt_broker = "localhost"
@@ -35,23 +36,22 @@ mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"
 mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"
 
 
-# Variabili globali
-sampling_rate = 15  # Intervallo tra le letture consecutive
+# Variabili globali con valori di default
+sampling_rate = 5  
 stop_alarm = False
-alarm_sound = 1  # Valore di default per l'allarme
-weather_location = "Bologna"  # Location di default
-alarm_filename = "alarms.json" # Nome del file per salvare gli allarmi
-alarms = []  # Lista degli allarmi
+alarm_sound = 1 
+weather_location = "Bologna"  
 
-# Funzione per generare i dati da scrivere su InfluxDB
-def generate_data(pressure_value):
-    return [
-        {"measurement": "pressure", "fields": {"value": pressure_value}},
-    ]
+# Caricamento delle sveglie da file
+alarm_filename = "alarms.json" 
+alarms = []  
+
+
+
+
 
 # Callback MQTT
 def on_connect(client, userdata, flags, rc):
-    # Iscriviti al topic principale
     client.subscribe("iot/bed_alarm")
 
 mqtt_client = mqtt.Client(f"PythonClient-{random.randint(1000, 9999)}")
@@ -62,25 +62,8 @@ mqtt_client.loop_start()
 # Inizializza Flask
 app = Flask(__name__)
 
-# def publish_with_retry(client, topic, message, max_retries=20, retry_delay=0.5):
-#     attempt = 0
-#     while attempt < max_retries:
-#         if client.is_connected():
-#             client.loop()
-#             result = client.publish(topic, json.dumps(message))
-#             if result.rc == 0:
-#                 print(f"Messaggio pubblicato con successo su {topic}")
-#                 return True
-#             else:
-#                 print(f"Errore nella pubblicazione su {topic}, codice {result.rc}. Tentativo {attempt+1}/{max_retries}")
-#         else:
-#             print("Errore: MQTT Client disconnesso. Riprovo...")
 
-#         time.sleep(retry_delay)
-#         attempt += 1
 
-#     print(f"Errore: impossibile pubblicare su {topic} dopo {max_retries} tentativi.")
-#     return False   
 
 # Endpoint per aggiornare il sampling rate
 @app.route('/update_sampling_rate', methods=['POST'])
@@ -115,6 +98,7 @@ def update_stop_alarm():
     
     return jsonify({"stop_alarm": stop_alarm, "status": "success"})
 
+
 # Endpoint per aggiornare l'alarm sound
 @app.route('/update_alarm_sound', methods=['POST'])
 def update_alarm_sound():
@@ -131,6 +115,7 @@ def update_alarm_sound():
     print("-----------------------------------")
     
     return jsonify({"alarm_sound": alarm_sound, "status": "success"})
+
 
 # Endpoint per settare un nuovo allarme (data, orario, frequenza)
 @app.route('/set_new_alarm', methods=['POST'])
@@ -169,12 +154,11 @@ def get_alarms():
     global alarms
     return jsonify({"alarms": alarms}), 200  # Assicuriamoci che ritorni sempre un JSON valido
 
+
 # Endpoint per modificare una sveglia
 @app.route('/update_alarm/<alarm_id>', methods=['PUT'])
 def modify_alarm(alarm_id):
-    '''
-    Modifies the properties of an alarm.
-    '''
+
     data = request.json
     global alarms
 
@@ -182,37 +166,35 @@ def modify_alarm(alarm_id):
         if alarm["alarm_id"] == alarm_id:
             alarm["alarm_time"] = data.get("alarm_time", alarm["alarm_time"])
             alarm["alarm_frequency"] = data.get("alarm_frequency", alarm["alarm_frequency"])
-            alarm["active"] = data.get("active", str(alarm["active"])).lower() == "true"  # Convert to boolean
+            alarm["active"] = data.get("active", str(alarm["active"])).lower() == "true"  
             save_alarms_to(alarm_filename, alarms)
             return jsonify({"message": "Alarm updated successfully", "alarm": alarm}), 201
 
     return jsonify({"error": "Alarm not found"}), 404
 
+
 # Endpoint per eliminare una sveglia
 @app.route('/remove_alarm/<alarm_id>', methods=['DELETE'])
 def remove_alarm(alarm_id):
-    '''
-    Deletes an alarm.
-    '''
     global alarms
 
     len1 = len(alarms)
     alarms = [alarm for alarm in alarms if alarm["alarm_id"] != alarm_id]
     if len(alarms) == len1:
         return jsonify({"message": "Alarm was not deleted."}), 400
-    save_alarms_to(alarm_filename, alarms)  # Save to file after deletion
+    save_alarms_to(alarm_filename, alarms)  
     return jsonify({"message": "Alarm deleted successfully"}), 201
+
 
 # Endpoint per eliminare tutte le sveglie
 @app.route('/remove_all_alarms', methods=['DELETE'])
 def remove_all_alarms():
-    '''
-    Deletes all alarms.
-    '''
     global alarms
+
     alarms = []
-    save_alarms_to(alarm_filename, alarms)  # Save to file after deletion
+    save_alarms_to(alarm_filename, alarms)  
     return jsonify({"message": "All alarms deleted successfully"}), 201
+
 
 # Endpoint per settare la location della sveglia
 @app.route('/set_alarm_location', methods=['POST'])
@@ -222,25 +204,16 @@ def set_alarm_location():
 
     # Se non viene fornita una location, utilizza quella di default
     location = data.get("location", weather_location)
-    # mqtt_client.publish(mqtt_topic_location, json.dumps({"location": location}))
-    # mqtt_client.loop(2)
-    # print(f"Published alarm location: {location} to {mqtt_topic_location}")
-    
-    return jsonify({"location": location, "status": "success"}), 201
+    return jsonify({"location": location, "status": "success"}), 20
 
-# @app.route('/getWeather', methods=['GET'])
-# def get_weather():
-#     '''
-#     Get current weather.
-#     '''
-#     global weather_location
 
-#     weather_data =
-#     if weather_data:
-#         return json.dumps({"weather": weather_data}), 200
-#     return jsonify({"error": "Weather server unavailable"}), 503
+# Endpoint per ricevere i dati dal sensore e inviarli al database InfluxDB
 
-# Endpoint per ricevere i dati dal sensore
+def generate_data(pressure_value):
+    return [
+        {"measurement": "pressure", "fields": {"value": pressure_value}},
+    ]
+
 @app.route('/sensor_data', methods=['POST'])
 def sensor_data():
     data = request.json
@@ -258,14 +231,12 @@ def sensor_data():
                 print(f"Errore durante la scrittura dei dati: {e}")
     return "OK", 201
 
+
+# Funzione per ottenere le condizioni meteo tramite OpenWeatherMap API
 def get_weather_conditions():
-    """
-    Gets the weather conditions for the current location.
-    """
     global weather_location, WEATHER_API_KEY
     if WEATHER_API_KEY:
         if weather_location:
-            print("Getting weather conditions...")
             weather_condition = get_weather_data(weather_location, WEATHER_API_KEY)
             sound_mapping = {
                 "Clear": 1,  # Soleggiato = Energico
@@ -273,7 +244,7 @@ def get_weather_conditions():
                 "Mist": 2,  # Nuvoloso = Medio
                 "Rain": 3,  # Pioggia = Rilassante
                 "Drizzle": 3,  # Piovigginoso = Rilassante
-                "Snow": 3,  # Neve = Dolce
+                "Snow": 3,  # Neve = Rilassante
                 "Thunderstorm": 4  # Temporale = Allerta
             }
 
@@ -283,6 +254,7 @@ def get_weather_conditions():
         
     return 1  # Default sound
 
+
 # ----- Alarm clock thread -----
 def alarm_clock():
     """
@@ -291,12 +263,12 @@ def alarm_clock():
     logging.info("Alarm clock manager thread ready.")
     global alarms, alarm_triggered, mqtt_client, mqtt_topic_alarm_sound, mqtt_topic_trigger_alarm
 
-    saved_time = ""
+    saved_time = ""   # Memorizza l'ultima volta che l'allarme è stato attivato in modo che lo stesso allaarme non venga attivato più volte nello stesso minuto
 
     while True:
         now = datetime.now()
-        current_time = now.strftime("%H:%M")  # format: HH:MM
-        current_weekday = now.weekday()  # weekdays: 0 (Monday) - 6 (Sunday)
+        current_time = now.strftime("%H:%M")  
+        current_weekday = now.weekday()  
 
         for alarm in alarms:
             alarm_time = alarm.get("alarm_time")
@@ -304,7 +276,6 @@ def alarm_clock():
             alarm_frequency = alarm.get("alarm_frequency", "once")
 
             if alarm_active and alarm_time == current_time:
-                # Controllo della frequenza dell'allarme
                 should_trigger = False
                 
                 if alarm_frequency == "everyday":
@@ -315,7 +286,7 @@ def alarm_clock():
                     should_trigger = True
                 elif alarm_frequency == "once" and saved_time != current_time:
                     should_trigger = True
-                    alarm["active"] = False  # Disattiva l'allarme dopo il trigger once
+                    alarm["active"] = False  # Disattiva l'allarme dopo il trigger once perché non deve essere più attivo, negli altri casi rimane attivo per la prossima esecuzione
                     save_alarms_to(alarm_filename, alarms)
                 elif alarm_frequency.startswith("every_"):
                     # Mappa per controllare i giorni della settimana
@@ -331,20 +302,18 @@ def alarm_clock():
                     if weekdays_map.get(alarm_frequency) == current_weekday:
                         should_trigger = True
 
+
                 if should_trigger and saved_time != current_time:
                     saved_time = current_time
-                    # Attempt to get weather data
+                    # Ottieni le condizioni meteo e pubblica il suono dell'allarme associato
                     weather_sound = get_weather_conditions()
                     mqtt_client.publish(mqtt_topic_alarm_sound, json.dumps({"alarm_sound": weather_sound}))
                     mqtt_client.publish(mqtt_topic_trigger_alarm, json.dumps({"trigger_alarm": "trigger_alarm"}))
-
-
                     print(f"Alarm {alarm.get('alarm_id', 'unknown')} triggered at {current_time} on weekday {current_weekday}")
 
-        time.sleep(10)  # check every 10 seconds, to make it less expensive
+        time.sleep(10)  
 
-
-# Pagina HTML principale
+# Web App
 @app.route('/')
 def index():
     return render_template('index.html')

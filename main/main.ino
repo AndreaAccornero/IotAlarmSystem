@@ -7,36 +7,36 @@
   #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
   #define LED_BUILTIN 2          // Pin del LED integrato
   #define SPEAKER_PIN 32         // Pin collegato allo speaker
-  #define PRESSURE_THRESHOLD 0 // Soglia per attivare LED e speaker
+  #define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
 
-  // Configurazione HTTP
-  const char* serverName = "http://192.168.1.111:5000/sensor_data"; // URL del server Flask
+  
 
+  
   // Configurazione MQTT
-  const char* mqtt_server = "192.168.1.111"; // Indirizzo IP del broker MQTT
-  const int mqtt_port = 1883;               // Porta del broker MQTT
-  const char* mqtt_topic_sampling_rate = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
-  const char* mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"; // Topic per ricevere il nuovo sampling_rate
-  const char* mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"; // Topic per ricevere il nuovo sampling_rate
-  const char* mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"  ; // Topic per ricevere il nuovo alarm_sound
+  const int mqtt_port = 1883;   
+  
+  //Topic
+  const char* mqtt_topic_sampling_rate = "iot/bed_alarm/sampling_rate"; 
+  const char* mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"; 
+  const char* mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"; 
+  const char* mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"  ; 
 
-  WiFiClient espClient;          // Client WiFi
-  PubSubClient client(espClient); // Oggetto MQTT
+  WiFiClient espClient;          
+  PubSubClient client(espClient); 
 
-  // Variabili globali
-  // unsigned long last_sample_time = 0;  // Memorizza il timestamp dell'ultima lettura
-  // unsigned long sampling_rate = 5000; // Intervallo tra le letture (in millisecondi)
-  bool alert_active = false;          // Stato attuale dell'allarme (LED e speaker)
 
-  // Variabili globali per l'accumulo dei dati
-  unsigned long last_sample_time = 0;  // Timestamp dell'ultimo invio dei dati
-  unsigned long sampling_rate = 5000;  // Intervallo in millisecondi per il calcolo della media
-  long pressureSum = 0;              // Somma cumulativa delle letture
-  unsigned int pressureCount = 0;    // Numero di letture accumulate
+  // Dichiarazione variabili con valori di default
+  bool alert_active = false;
+  unsigned long last_sample_time = 0;  
+  unsigned long sampling_rate = 5000;
   unsigned int alarm_sound = 1; 
+  
+  // Variabili per calcolare la media dei valori
+  long pressureSum = 0;              
+  unsigned int pressureCount = 0;    
+
 
   void setup() {
-    // Inizializzazione del monitor seriale per il debug
     Serial.begin(115200);
 
     // Configura i pin
@@ -49,28 +49,22 @@
 
     // Configurazione MQTT
     client.setServer(mqtt_server, mqtt_port);
-    client.setCallback(mqttCallback); // Imposta la funzione di callback per i messaggi MQTT
-
+    client.setCallback(mqttCallback); 
     connectToMQTT();
 
   }
 
   
   void loop() {
-    // Mantiene la connessione MQTT attiva
     if (!client.connected()) {
       connectToMQTT();
     }
     client.loop();
 
-    unsigned long current_time = millis(); // Ottiene il tempo corrente
+    unsigned long current_time = millis(); 
 
-    // Legge il valore dal sensore ad ogni iterazione
+    // Legge il valore dal sensore ad ogni iterazione e accumulo per la media
     int sensorValue = analogRead(PRESSURE_SENSOR_PIN);
-    // Serial.print("Valore del sensore: ");
-    // Serial.println(sensorValue);
-
-    // Accumula i valori
     pressureSum += sensorValue;
     pressureCount++;
 
@@ -80,10 +74,10 @@
       Serial.print("Media dei valori: ");
       Serial.println(pressureAverage);
 
-      // Gestisce il LED e lo speaker in base al valore medio
+      // Chiamo il check per la sveglia e passo il valore 
       handleAlert(pressureAverage);
 
-      // Invia i dati al server Flask (modifica il payload se necessario)
+      // Invia i dati al server Flask 
       sendPressureData(pressureAverage);
 
       // Resetta i contatori per il prossimo intervallo
@@ -106,14 +100,12 @@
   void connectToMQTT() {
     while (!client.connected()) {
       Serial.print("Connecting to MQTT...");
-      if (client.connect("ESP32Client")) { // Nome univoco per il dispositivo MQTT
+      if (client.connect("ESP32Client")) { 
         Serial.println("connected");
 
-        // Sottoscrive al topic per ricevere aggiornamenti sul sampling_rate
+        // Sottoscrive ai topic 
         client.subscribe(mqtt_topic_sampling_rate);
-        // Sottoscrive ai topic per attivare l'allarme
         client.subscribe(mqtt_topic_trigger_alarm);
-        // Sottoscrive ai topic per disattivare l'allarme
         client.subscribe(mqtt_topic_stop_alarm);
         client.subscribe(mqtt_topic_alarm_sound);
       } else {
@@ -125,20 +117,21 @@
     }
   }
 
+
+  // Funzione di callback per la ricezione dei messaggi MQTT
   void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message received on topic: ");
     Serial.println(topic);
 
-    // Converte il payload in una stringa
     char json[length + 1];
     strncpy(json, (char*)payload, length);
-    json[length] = '\0'; // Termina la stringa
+    json[length] = '\0'; 
 
     Serial.print("Message: ");
     Serial.println(json);
 
-    // Parsing del JSON
-    StaticJsonDocument<200> doc; // Crea un buffer JSON con una dimensione adeguata
+ 
+    StaticJsonDocument<200> doc; // 
     DeserializationError error = deserializeJson(doc, json);
 
     if (error) {
@@ -147,10 +140,10 @@
       return;
     }
 
-    // Estrae il valore di "sampling_rate"
+    
     if (doc.containsKey("sampling_rate")) {
       int new_sampling_rate = doc["sampling_rate"];
-      sampling_rate = new_sampling_rate * 1000; // Moltiplica per 1000
+      sampling_rate = new_sampling_rate * 1000; //
       Serial.print("Updated sampling_rate: ");
       Serial.println(sampling_rate);
     }
@@ -168,18 +161,15 @@
       }
   }
 
+  // Funzione per inviare i dati al server Flask
   void sendPressureData(int pressureValue) {
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
 
-      // Configura la richiesta HTTP
+      
       http.begin(serverName);
       http.addHeader("Content-Type", "application/json");
-
-      // Crea il payload JSON
       String payload = "{\"pressure_value\": " + String(pressureValue) + "}";
-
-      // Invia la richiesta POST
       int httpResponseCode = http.POST(payload);
 
       // Controlla la risposta del server
@@ -199,20 +189,23 @@
     }
   }
 
+
+  // Funzione per gestire la sveglia  
   void handleAlert(int pressureValue) {
 
 
-
+    // Si attiva solo se il valore supera la soglia e la sveglia è attiva 
     if (alert_active && pressureValue >= PRESSURE_THRESHOLD) {
-      digitalWrite(LED_BUILTIN, HIGH); // Accende il LED
-      playMelody(alarm_sound);     // Suona lo speaker a 2000 Hz
+      digitalWrite(LED_BUILTIN, HIGH); 
+      playMelody(alarm_sound);     
     } else {
-      digitalWrite(LED_BUILTIN, LOW);  // Spegne il LED
-      noTone(SPEAKER_PIN);             // Ferma lo speaker
-      alert_active = false;            // Disattiva lo stato di allarme
+      digitalWrite(LED_BUILTIN, LOW);  
+      noTone(SPEAKER_PIN);            
+      alert_active = false;    // Una volta suonato l'allarme, lo disattiva
     }
   }
-
+  
+  // Funzione per suonare la melodia in base al tipo di suono-tempo
   void playMelody(int soundType) {
     switch (soundType) {
         case 1: // Clear (Soleggiato) - Energico
@@ -270,6 +263,22 @@
             delay(450);
             tone(SPEAKER_PIN, 600, 400);
             delay(450);
+            tone(SPEAKER_PIN, 500, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 600, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 500, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 600, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 500, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 600, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 500, 400);
+            delay(450);
+            tone(SPEAKER_PIN, 600, 400);
+            delay(450);
             break;
 
         case 4: // Thunderstorm (Temporale) - Allerta
@@ -281,9 +290,57 @@
             delay(150);
             tone(SPEAKER_PIN, 1500, 300);
             delay(350);
+            tone(SPEAKER_PIN, 2000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 2500, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 3000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 1500, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 2000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 2500, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 3000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 1500, 300);
+            delay(350);
+            tone(SPEAKER_PIN, 2000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 2500, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 3000, 100);
+            delay(150);
+            tone(SPEAKER_PIN, 1500, 300);
+            delay(350);
             break;
 
         default:
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1000, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1200, 200);
+            delay(250);
+            tone(SPEAKER_PIN, 1400, 200);
+            delay(250);
             tone(SPEAKER_PIN, 1000, 200);
             delay(250);
             tone(SPEAKER_PIN, 1200, 200);
