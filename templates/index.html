@@ -75,11 +75,11 @@
             <p id="samplingRateResponse"></p>
         </form>
 
+
         <!-- Update Stop Alarm -->
         <form id="stopAlarmForm">
             <h3>Update Stop Alarm</h3>
             <button type="button" onclick="updateStopAlarm('true')">Stop Alarm</button>
-            <!-- <p id="stopAlarmResponse"></p> -->
         </form>
 
 
@@ -109,6 +109,7 @@
             <p id="newAlarmResponse"></p>
         </form>
         
+
         <!-- Modify Alarm -->
         <form id="modifyAlarmForm">
             <h3>Modify Alarm</h3>
@@ -134,7 +135,6 @@
                 <option value="every_sunday">Every Sunday</option>
             </select>
 
-            
             <label for="modify_active">Active:</label>
             <select id="modify_active" name="active">
                 <option value="">No Change</option>
@@ -146,6 +146,7 @@
             <p id="modifyAlarmResponse"></p>
         </form>
 
+
         <!-- Remove Alarm -->
         <form id="removeAlarmForm">
             <h3>Remove Alarm</h3>
@@ -155,11 +156,13 @@
             <p id="removeAlarmResponse"></p>
         </form>
 
+
         <!-- Remove All Alarm -->
         <form id="removeAllAlarmsForm">
             <h3>Remove all Alarms</h3>
             <button type="button" onclick="removeAllAlarms()">Clear</button>
         </form>
+
 
         <!-- Set Location -->
         <form id="locationForm">
@@ -186,6 +189,7 @@
         </form>
     </div>
 
+
     <script>
         async function sendPostRequest(endpoint, data, responseElement) {
             try {
@@ -202,6 +206,7 @@
             }
         }
 
+
         async function sendPutRequest(endpoint, data, responseElement) {
             try {
                 const response = await fetch(endpoint, {
@@ -217,6 +222,7 @@
             }
         }
 
+
         async function sendDeleteRequest(endpoint, responseElement) {
             try {
                 const response = await fetch(endpoint, {
@@ -231,19 +237,23 @@
             }
         }
 
+
         function updateSamplingRate() {
             let samplingRate = document.getElementById("sampling_rate").value;
             sendPostRequest('/update_sampling_rate', { sampling_rate: samplingRate }, "samplingRateResponse");
         }
 
+
         function updateStopAlarm(stopAlarm) {
             sendPostRequest('/update_stop_alarm', { stop_alarm: stopAlarm }, "stopAlarmResponse");
         }
+
 
         function updateAlarmSound() {
             let alarmSound = document.getElementById("alarm_sound").value;
             sendPostRequest('/update_alarm_sound', { alarm_sound: alarmSound }, "alarmSoundResponse");
         }
+
 
         function setNewAlarm() {
             let alarmId = document.getElementById("alarm_id").value;
@@ -255,6 +265,7 @@
                 alarm_frequency: alarmFrequency 
             }, "newAlarmResponse");
         }
+
 
         function modifyAlarm() {
             let alarmId = document.getElementById("modify_alarm_id").value;
@@ -270,10 +281,12 @@
             sendPutRequest(`/update_alarm/${alarmId}`, data, "modifyAlarmResponse");
         }
 
+
         function removeAlarm() {
             let alarmId = document.getElementById("remove_alarm_id").value;
             sendDeleteRequest(`/remove_alarm/${alarmId}`, "removeAlarmResponse");
         }
+
 
         function removeAllAlarms() {
             sendDeleteRequest('/remove_all_alarms', "removeAlarmResponse");

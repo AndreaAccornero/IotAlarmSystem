@@ -4,18 +4,16 @@
   #include <ArduinoJson.h>
   #include "../credentials.h"
 
-  #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
-  #define LED_BUILTIN 2          // Pin del LED integrato
-  #define SPEAKER_PIN 32         // Pin collegato allo speaker
+  #define LED_BUILTIN 2           // Pin del LED integrato
+  #define SPEAKER_PIN 32          // Pin collegato allo speaker
+  #define PRESSURE_SENSOR_PIN 33  // Pin collegato al sensore di pressione
   #define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
 
-  
 
-  
-  // Configurazione MQTT
+  // Configurazione porta MQTT
   const int mqtt_port = 1883;   
   
-  //Topic
+  // Configurazione topic MQTT
   const char* mqtt_topic_sampling_rate = "iot/bed_alarm/sampling_rate"; 
   const char* mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"; 
   const char* mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"; 
@@ -31,6 +29,7 @@
   unsigned long sampling_rate = 5000;
   unsigned int alarm_sound = 1; 
   
+
   // Variabili per calcolare la media dei valori
   long pressureSum = 0;              
   unsigned int pressureCount = 0;    
@@ -39,10 +38,10 @@
   void setup() {
     Serial.begin(115200);
 
-    // Configura i pin
-    pinMode(PRESSURE_SENSOR_PIN, INPUT);
+    // Configurazione dei pin
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(SPEAKER_PIN, OUTPUT);
+    pinMode(PRESSURE_SENSOR_PIN, INPUT);
 
     // Connessione WiFi
     connectToWiFi();
@@ -51,7 +50,6 @@
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(mqttCallback); 
     connectToMQTT();
-
   }
 
   
@@ -87,6 +85,7 @@
     }
   }
 
+  // Funzione per connettersi al WiFi
   void connectToWiFi() {
     Serial.print("Connecting to WiFi");
     WiFi.begin(ssid, password);
@@ -97,13 +96,15 @@
     Serial.println("\nConnected to WiFi");
   }
 
+
+  // Funzione per connettersi al server MQTT
   void connectToMQTT() {
     while (!client.connected()) {
       Serial.print("Connecting to MQTT...");
       if (client.connect("ESP32Client")) { 
         Serial.println("connected");
 
-        // Sottoscrive ai topic 
+        // Sottoscrizione ai topic MQTT
         client.subscribe(mqtt_topic_sampling_rate);
         client.subscribe(mqtt_topic_trigger_alarm);
         client.subscribe(mqtt_topic_stop_alarm);
@@ -118,7 +119,7 @@
   }
 
 
-  // Funzione di callback per la ricezione dei messaggi MQTT
+  // Callback per la ricezione dei messaggi MQTT
   void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print("Message received on topic: ");
     Serial.println(topic);
@@ -130,8 +131,7 @@
     Serial.print("Message: ");
     Serial.println(json);
 
- 
-    StaticJsonDocument<200> doc; // 
+    StaticJsonDocument<200> doc; 
     DeserializationError error = deserializeJson(doc, json);
 
     if (error) {
@@ -140,21 +140,24 @@
       return;
     }
 
-    
+    // Gestione dei messaggi ricevuti dai topic MQTT
     if (doc.containsKey("sampling_rate")) {
       int new_sampling_rate = doc["sampling_rate"];
       sampling_rate = new_sampling_rate * 1000; //
       Serial.print("Updated sampling_rate: ");
       Serial.println(sampling_rate);
     }
+
     if (doc.containsKey("trigger_alarm")) {
         alert_active = true;
     }
+
     if (doc.containsKey("stop_alarm")) {
       if (alert_active) {
         alert_active = false;
       }
     } 
+
     if (doc.containsKey("alarm_sound")) {
       int new_alarm_sound = doc["alarm_sound"];
       alarm_sound = new_alarm_sound;
@@ -166,7 +169,6 @@
     if (WiFi.status() == WL_CONNECTED) {
       HTTPClient http;
 
-      
       http.begin(serverName);
       http.addHeader("Content-Type", "application/json");
       String payload = "{\"pressure_value\": " + String(pressureValue) + "}";
@@ -182,7 +184,6 @@
         Serial.println(httpResponseCode);
       }
 
-      // Chiude la connessione HTTP
       http.end();
     } else {
       Serial.println("WiFi Disconnected");
@@ -193,7 +194,6 @@
   // Funzione per gestire la sveglia  
   void handleAlert(int pressureValue) {
 
-
     // Si attiva solo se il valore supera la soglia e la sveglia è attiva 
     if (alert_active && pressureValue >= PRESSURE_THRESHOLD) {
       digitalWrite(LED_BUILTIN, HIGH); 
@@ -201,87 +201,44 @@
     } else {
       digitalWrite(LED_BUILTIN, LOW);  
       noTone(SPEAKER_PIN);            
-      alert_active = false;    // Una volta suonato l'allarme, lo disattiva
+      alert_active = false; // Una volta suonata la sveglia, la disattiva
     }
   }
   
-  // Funzione per suonare la melodia in base al tipo di suono-tempo
+  
+  // Funzione per suonare la sveglia con una specifica melodia in base alle condizioni meteo rilevate
   void playMelody(int soundType) {
     switch (soundType) {
         case 1: // Clear (Soleggiato) - Energico
+          for (int i = 0; i < 5; i++) {
             tone(SPEAKER_PIN, 1000, 200);
             delay(250);
             tone(SPEAKER_PIN, 1200, 200);
             delay(250);
             tone(SPEAKER_PIN, 1400, 200);
             delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            Serial.print("Sta suonando il suono 1");
-            break;
+          }
+          break;
 
         case 2: // Clouds (Nuvoloso) - Medio
+          for (int i = 0; i < 10; i++) {
             tone(SPEAKER_PIN, 800, 300);
             delay(350);
             tone(SPEAKER_PIN, 900, 300);
-            tone(SPEAKER_PIN, 800, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 900, 300);
-            tone(SPEAKER_PIN, 800, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 900, 300);
-            tone(SPEAKER_PIN, 800, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 900, 300);
-            tone(SPEAKER_PIN, 800, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 900, 300);
-            tone(SPEAKER_PIN, 800, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 900, 300);
-            delay(350);
-            break;
+          }
+          break;
 
         case 3: // Rain/Drizzle (Pioggia/Piovigginoso) - Rilassante
+          for (int i = 0; i < 10; i++) {
             tone(SPEAKER_PIN, 500, 400);
             delay(450);
             tone(SPEAKER_PIN, 600, 400);
             delay(450);
-            tone(SPEAKER_PIN, 500, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 600, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 500, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 600, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 500, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 600, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 500, 400);
-            delay(450);
-            tone(SPEAKER_PIN, 600, 400);
-            delay(450);
-            break;
+          }
+          break;
 
         case 4: // Thunderstorm (Temporale) - Allerta
+          for (int i = 0; i < 6; i++) {
             tone(SPEAKER_PIN, 2000, 100);
             delay(150);
             tone(SPEAKER_PIN, 2500, 100);
@@ -290,64 +247,18 @@
             delay(150);
             tone(SPEAKER_PIN, 1500, 300);
             delay(350);
-            tone(SPEAKER_PIN, 2000, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 2500, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 3000, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 1500, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 2000, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 2500, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 3000, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 1500, 300);
-            delay(350);
-            tone(SPEAKER_PIN, 2000, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 2500, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 3000, 100);
-            delay(150);
-            tone(SPEAKER_PIN, 1500, 300);
-            delay(350);
-            break;
+          }
+          break;
 
-        default:
+        default: // Case 1: Clear (Soleggiato) - Energico
+          for (int i = 0; i < 5; i++) {
             tone(SPEAKER_PIN, 1000, 200);
             delay(250);
             tone(SPEAKER_PIN, 1200, 200);
             delay(250);
             tone(SPEAKER_PIN, 1400, 200);
             delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1000, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1200, 200);
-            delay(250);
-            tone(SPEAKER_PIN, 1400, 200);
-            delay(250);
-            break;
-            break;
+          }
+          break;
     }
 }
