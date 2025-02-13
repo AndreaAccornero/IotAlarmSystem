@@ -9,28 +9,31 @@
 #define PRESSURE_SENSOR_PIN 33 // Pin collegato al sensore di pressione
 #define LED_BUILTIN 2          // Pin del LED integrato
 #define SPEAKER_PIN 32         // Pin collegato allo speaker
-#define PRESSURE_THRESHOLD 4095 // Soglia per attivare LED e speaker
+#define PRESSURE_THRESHOLD 4060 // Soglia per attivare LED e speaker
 
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 3600, 60000);
 
-// Configurazione HTTP
-const char* serverName = "http://192.168.1.124:5000/sensor_data"; // URL del server Flask
+
 
 // Configurazione MQTT
-const char* mqtt_server = "192.168.1.124"; // Indirizzo IP del broker MQTT
-const int mqtt_port = 1883;               // Porta del broker MQTT
-const char* mqtt_topic = "iot/bed_alarm/sampling_rate"; // Topic per ricevere il nuovo sampling_rate
-WiFiClient espClient;          // Client WiFi
-PubSubClient client(espClient); // Oggetto MQTT
+const int mqtt_port = 1883;   
 
-// Variabili globali
-unsigned long last_sample_time = 0;  // Memorizza il timestamp dell'ultima lettura
-unsigned long sampling_rate = 5000; // Intervallo tra le letture (in millisecondi)
-bool alert_active = false;          // Stato attuale dell'allarme (LED e speaker)
+//Topic
+const char* mqtt_topic_sampling_rate = "iot/bed_alarm/sampling_rate"; 
+const char* mqtt_topic_trigger_alarm = "iot/bed_alarm/trigger_alarm"; 
+const char* mqtt_topic_stop_alarm = "iot/bed_alarm/stop_alarm"; 
+const char* mqtt_topic_alarm_sound = "iot/bed_alarm/alarm_sound"  ; 
+
+WiFiClient espClient;          
+PubSubClient client(espClient); 
+
+
+// Dichiarazione variabili con valori di default
+bool alert_active = false;
+unsigned long last_sample_time = 0;  
+unsigned long sampling_rate = 5000;
+unsigned int alarm_sound = 1; 
 
 void setup() {
-  // Inizializzazione del monitor seriale per il debug
   Serial.begin(115200);
 
   // Configura i pin
