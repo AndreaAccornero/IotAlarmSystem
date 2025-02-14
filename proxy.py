@@ -204,7 +204,9 @@ def set_alarm_location():
     # Se non viene fornita una location, utilizza quella di default
     location = data.get("location", weather_location)
 
-    return jsonify({"location": location, "status": "success"}), 20
+    weather_location = location
+
+    return jsonify({"location": weather_location, "status": "success"}), 201
 
 
 # Funzione per generare i dati da inviare al database InfluxDB
