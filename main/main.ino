@@ -187,17 +187,17 @@ void sendPressureData(int pressureValue) {
     sumOneWayLatency += oneWayLatency;
     countInstances++;
 
-    // Ogni 10 istanze, calcola e stampa la media
-    if (countInstances >= 10) {
-      float avgLatency = sumOneWayLatency / (float)countInstances;
-      Serial.print("Media latenza one-way per 10 istanze: ");
-      Serial.print(avgLatency);
-      Serial.println(" ms");
+    // Calcola la media della latenza one-way per 3 istanze
+    // if (countInstances >= 3) {
+    //   float avgLatency = sumOneWayLatency / (float)countInstances;
+    //   Serial.print("Media latenza one-way per 3 istanze: ");
+    //   Serial.print(avgLatency);
+    //   Serial.println(" ms");
 
-      // Resetta i contatori per il prossimo calcolo
-      sumOneWayLatency = 0;
-      countInstances = 0;
-    }
+    //   // Resetta i contatori per il prossimo calcolo
+    //   sumOneWayLatency = 0;
+    //   countInstances = 0;
+    // }
 
     // Controlla la risposta del server
     if (httpResponseCode > 0) {
